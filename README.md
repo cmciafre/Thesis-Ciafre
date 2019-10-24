@@ -5,7 +5,7 @@ Contemporary plant communities are simultaneously the reflection of current habi
 Repository Description Notes:
 This repository contains data associated with a master's thesis by C.M. Ciafre as well as code for preliminary analyses. Note that Site 15 does not exist in the data; this was done intentionally as this site is not independent from Site 14.
 
-Webpage: https://cmciafre.github.io/Thesis-BIOL5700/
+Webpage: https://cmciafre.github.io/Thesis-Ciafre/
 
 References:
 T. C. Hsieh, K. H. Ma and Anne Chao. 2019 iNEXT: iNterpolation and EXTrapolation for species diversity. R     package version 2.0.19 .
