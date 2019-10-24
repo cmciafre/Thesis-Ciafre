@@ -1,19 +1,16 @@
 ---
-title: "Rarefaction of quadrat data"
+title: "Deterministic processes drive wetland plant community composition and diversity in the Eastern Highland Rim"
 author: "C. M. Ciafre"
-date: "October 18, 2019"
-output: html_document
-df_print: paged
-  rows.print: 10
-  theme: lumen
-  highlight: breezedark
-  number_sections: yes
-  toc: true
-  toc_float:
-    collapsed: false
-    smooth_scroll: true
----
+output:
+  html_notebook:
+    df_print: paged
+    rows.print: 10
+    theme: journal
+    highlight: zenburn
+    number_sections: no
 
+---
+#   {.tabset .tabset-fade}
 
 ```{r setup, NOTICE USE of PACMAN, include=FALSE}
 #install pacman first to automatically install and load any needed packages
@@ -33,15 +30,18 @@ colnames(quaddatas)[colnames(quaddatas)=="Pond"] <- "Site"
 #Note: there is no Site 15; it was ditched halfway through sampling because it was not independent from Site 14.
 ```
 
+## Background 
+
 <figure>
-<img src="Quadrat.jpg" width="600" height="300"></figure><br>
+<img src="Images/QuadratCropped.jpg"></figure><br>
 
-## Data Configuration
+### Data Collection
 
-We have species composition data from 1031 1m^2 quadrats and 27 sites.
+### Data Configuration
 
+We have species composition data from 1031 1m^2 quadrats representing 27 sites.
 
-Nearly all statistical packages require the data to be in a presence-absence form, so we must convert it. There are several ways to do it (one of which can maintain cover values rather than changing it to binary data); I used a loop function. Note that I had to add a "site" column back in to sort the matrix accordingly.
+Nearly all statistical packages require the data to be in a presence-absence form. There are several ways to do it (one of which can maintain cover values rather than changing it to binary data); I used a loop function. The result is a presence-absence matrix with Site as a column so subsamples can be organized accordingly. This column must be deleted for every analysis, however!
 
 ```{r Loop magic, cache=TRUE, include=FALSE}
 sites_sub<-unique(sppxsites$ID)
@@ -72,9 +72,9 @@ names(AllPonds)[names(AllPonds)=="sitenames$Pond"] <- "Site"
 AllPondsTrimmed<-select(AllPonds, c(1:7))
 kable(AllPondsTrimmed[1:5, ], format = "pandoc", full_width=F, caption = 'Table 1. Sample of data in presence-absence format.')
 ```
-***
-## Rarefaction and extrapolation of Hill numbers
 
+
+## Diversity Estimates
 
 ```{r Split sites, include=FALSE}
 #Break up AllPonds into dataframes by site
@@ -110,30 +110,82 @@ S27<-t(select(filter(AllPonds, Site == 27), -1))
 S28<-t(select(filter(AllPonds, Site == 28), -1))
 ```
 
-```{r Unicorn vomit, echo=TRUE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, cache=TRUE}
+```{r Unicorn vomit prep, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, cache=TRUE, include=FALSE}
 #Make a list of all site dataframes
 site.list.all = list(S01=S01,S02=S02,S03=S03,S04=S04,S05=S05,S06=S06,S07=S07,S08=S08,S09=S09,S10=S10,S11=S11,S12=S12,S13=S13,S14=S14,S16=S16,S17=S17,S18=S18,S19=S19,S20=S20,S21=S21,S22=S22,S23=S23,S24=S24,S25=S25,S26=S26,S27=S27,S28=S28)
 #Convert everything in list to incidence frequencies
 site.list.freq.all = lapply(site.list.all, as.incfreq)
+```
 
-#iNEXT function produces an iNEXT object for richness and two common diversity indices
-#We can use this to plot richness (q=0), Shannon Div (q=1), Simpson Div (q=2)
-#nboot is the number of bootstraps
+```{r Unicorn vomit prep2, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, cache=TRUE, include=FALSE}
 out.inc.all<-iNEXT(site.list.freq.all, q=0, datatype="incidence_freq", nboot=10000)
+```
 
-#iNEXT has its own ggplot-style plotting system that you have to use (most syntax is the same)
+```{r Kable 2, include=FALSE}
+#The iNEXT output ("out.inc.all") contains three tables; "AsyEst" has all the data we need
+#Saved it as an object and changed it so it would be more readable
+RichDiv<-out.inc.all$AsyEst
+RichDivT<-subset(RichDiv, select=-c(s.e., LCL, UCL))
+RichDivObs<-subset(spread(RichDivT, Diversity, Observed), select=-c(Estimator))
+RichDivEst<-subset(spread(RichDivT, Diversity, Estimator), select=-c(Observed))
+
+#Trim down column names so they don't suck
+names(RichDivObs)<-c("Site", "RichnessObs", "ShannonObs", "SimpsonObs")
+names(RichDivEst)<-c("Site", "RichnessExp", "ShannonExp", "SimpsonExp")
+
+#Collapse sites; have to do funky things to deal with NAs
+compress <- function(x) c(na.omit(x), NA)[1]
+RichDivObs.1<-aggregate(RichDivObs[2:4], RichDivObs[1], compress)
+RichDivEst.1<-aggregate(RichDivEst[2:4], RichDivEst[1], compress)
+
+#Remove site column from RichDivEst so it's not duplicated when merging
+RichDivEst.2<-subset(RichDivEst.1, select=-c(Site))
+
+#Merge everybody together
+RichDivFinal<-cbind(RichDivObs.1, RichDivEst.2)
+
+#Reorder columns so they make sense
+RichDivTab<-RichDivFinal[,c(1,2,5,3,6,4,7)]
+RichDivKab<-RichDivTab[c(1, 6, 7, 8, 10, 26, 27),]
+
+kable(RichDivKab[1:7,], format = "pandoc", full_width=F, caption = 'Table 2. Observed and expected Hill numbers from a portion of the sites.')
+```
+
+```{r Est and Obs Richness, echo=FALSE, fig.height=4, fig.width=10, message=FALSE, warning=FALSE}
+RichnessOnly<-filter(RichDiv, Diversity == "Species richness")
+colnames(RichnessOnly)[colnames(RichnessOnly)=="LCL"] <- "RichLCL"
+colnames(RichnessOnly)[colnames(RichnessOnly)=="UCL"] <- "RichUCL"
+colnames(RichnessOnly)[colnames(RichnessOnly)=="Estimator"] <- "Estimated"
+RichGath<-gather(RichnessOnly,Richness,value,Observed:Estimated)
+RichSize<- cbind(RichGath, sitesizes$Quadrats)
+colnames(RichSize)[colnames(RichSize)=="sitesizes$Quadrats"] <- "Quadrats"
+
+
+ggplot(RichGath, aes(x=Site, y=value, color=Richness)) +
+  scale_color_manual(values=c("darkgrey", "black"))+
+  geom_errorbar(aes(ymin=RichLCL, ymax=RichUCL), width=.3, color="darkgrey") +
+  geom_point(size=2)+
+  ylab("Species Richness")+
+  coord_cartesian(ylim = c(0, 250))+
+  ggtitle("Estimated and observed species richness by site, with 95% confidence intervals.")+
+  labs(caption="Note that upper confidence interval for Site 26 extends to 262.8 and Site 10 extends to 408.52.")+
+  theme(axis.title=element_text(size=14), plot.title = element_text(size=14))
+```
+
+Sites had widely varying observed total richness. The use of extrapolated species accumulation curves can tell us how many species are likely to be at the site based on how many were found in accumulating subsamples. However if a curve never flattens, it gives a wild estimate of richness (see Site 10).
+
+What do the curves that made these estimates look like? Let's take a look!
+
+```{r Unicorn vomit, echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, cache=TRUE}
 ggiNEXT(out.inc.all, type=1, color.var="site") + 
   theme_bw(base_size = 18) +
   ylab("Species Richness") +
   xlab("Number of Quadrats") +
-  ggtitle("Projectile unicorn vomit") +
+  ggtitle("Interpolated and extrapolated richness") +
   labs(caption="B=10000.")
 ```
-<br>This plot is not particularly helpful other than to visualize the general span of observed and expected richnesses and sampling efforts. 
 
-## Examining species curves further
-
-I'll split up the plots to visualize the curves in more manageable doses. Note that sites were plotted for spatial efficiency rather than any logical order. Also note that each plot uses different scales.
+This plot is not particularly helpful other than to visualize the general span of observed and expected richnesses and sampling efforts. Examining the curves in portions of 3-4 is necessary to 
 
 ```{r Smaller curves 1, include=FALSE}
 #List the dataframes, then convert them into incidence frequencies
@@ -215,68 +267,10 @@ G<-ggiNEXT(out.inc7, type=1, color.var="site") +
   labs(caption="B=100.")
 ```
 
-```{r Many curves output, fig.height=25, fig.width=7}
+```{r Many curves output, fig.height=25, fig.width=7, include=FALSE}
 ggarrange(A, B, C, D, E, F, G, nrow=7)
 ```
-***
-## Beyond curves
-
-Other than using it to make some sweet curves, can use the iNEXT object to extract richness and diversity values. This object also outputs standard error and lower and upper estimates for each value shown, however these were ommitted for brevity. 
-
-```{r Kable 2, echo=FALSE}
-#The iNEXT output ("out.inc.all") contains three tables; "AsyEst" has all the data we need
-#Saved it as an object and changed it so it would be more readable
-RichDiv<-out.inc.all$AsyEst
-RichDivT<-subset(RichDiv, select=-c(s.e., LCL, UCL))
-RichDivObs<-subset(spread(RichDivT, Diversity, Observed), select=-c(Estimator))
-RichDivEst<-subset(spread(RichDivT, Diversity, Estimator), select=-c(Observed))
-
-#Trim down column names so they don't suck
-names(RichDivObs)<-c("Site", "RichnessObs", "ShannonObs", "SimpsonObs")
-names(RichDivEst)<-c("Site", "RichnessExp", "ShannonExp", "SimpsonExp")
-
-#Collapse sites; have to do funky things to deal with NAs
-compress <- function(x) c(na.omit(x), NA)[1]
-RichDivObs.1<-aggregate(RichDivObs[2:4], RichDivObs[1], compress)
-RichDivEst.1<-aggregate(RichDivEst[2:4], RichDivEst[1], compress)
-
-#Remove site column from RichDivEst so it's not duplicated when merging
-RichDivEst.2<-subset(RichDivEst.1, select=-c(Site))
-
-#Merge everybody together
-RichDivFinal<-cbind(RichDivObs.1, RichDivEst.2)
-
-#Reorder columns so they make sense
-RichDivTab<-RichDivFinal[,c(1,2,5,3,6,4,7)]
-
-kable(RichDivTab[1:7,], format = "pandoc", full_width=F, caption = 'Table 2. Observed and expected Hill numbers from a portion of the sites.') 
-```
-
-Let's visually interpret how the observed richness compares with the expected richness.
-
-```{r Est and Obs Richness, echo=FALSE, fig.height=4, fig.width=10, message=FALSE, warning=FALSE}
-RichnessOnly<-filter(RichDiv, Diversity == "Species richness")
-colnames(RichnessOnly)[colnames(RichnessOnly)=="LCL"] <- "RichLCL"
-colnames(RichnessOnly)[colnames(RichnessOnly)=="UCL"] <- "RichUCL"
-colnames(RichnessOnly)[colnames(RichnessOnly)=="Estimator"] <- "Estimated"
-RichGath<-gather(RichnessOnly,Richness,value,Observed:Estimated)
-RichSize<- cbind(RichGath, sitesizes$Quadrats)
-colnames(RichSize)[colnames(RichSize)=="sitesizes$Quadrats"] <- "Quadrats"
-
-
-ggplot(RichGath, aes(x=Site, y=value, color=Richness)) +
-  scale_color_manual(values=c("darkgrey", "black"))+
-  geom_errorbar(aes(ymin=RichLCL, ymax=RichUCL), width=.3, color="darkgrey") +
-  geom_point(size=2)+
-  ylab("Species Richness")+
-  coord_cartesian(ylim = c(0, 250))+
-  ggtitle("Estimated and observed species richness by site, with 95% confidence intervals.")+
-  labs(caption="Note that upper confidence interval for Site 26 extends to 262.8 and Site 10 extends to 408.52.")+
-  theme(axis.title=element_text(size=14), plot.title = element_text(size=14))
-```
-
-Oh. Yikes. Some of those look pretty rough. Let's compare completion percentage (observed/expected) with sampling effort (# quadrats sampled/site radius) to see if some sites were unexpectedly low due to obvious undersampling.
-
+ 
 ```{r Data rearranging, echo=FALSE, fig.height=4, fig.width=10, message=FALSE, warning=FALSE}
 Intervals<-select(slice(RichGath, c(28:54)), c(RichLCL, RichUCL))
 RichInts<-cbind(RichDivTab, Intervals)
@@ -304,6 +298,10 @@ aRichQuad<-anova(lmRichQuad)
 aRichQuad
 ```
 
+These curves illustrate not only *where* the flattening point (expected richness) occurs, but also *how quickly*. Examining a curve can allow someone to estimate how many more samples would be needed to reach that point, however if doing so samples a larger area then the curve may never flatten. 
+
+Let's see if sampling effort (# quadrats/area sampled) affected percent estimated sampling completion; if it did, that would be a big problem and I would have a lot of explaining to do to my committee.
+
 ```{r Sampling sufficiency, echo=FALSE}
 ggplot(RichInts, aes(x=sitesizes$QuadsArea, y=PercComplete, color="black")) +
   geom_smooth(method="lm", color="black")+
@@ -315,19 +313,34 @@ ggplot(RichInts, aes(x=sitesizes$QuadsArea, y=PercComplete, color="black")) +
   theme(axis.title=element_text(size=14), plot.title = element_text(size=14))
 ```
 
-There is no relationship between sampling effort and completion percentage (p=`r aRichQuad[1,5]`). However, note that Sites 10 and 26 were flagged as outliers by the autoplot function. 
+There is no relationship between sampling effort and completion percentage (p=`r aRichQuad[1,5]`). However, note that Sites 10 and 26 were flagged as outliers by the autoplot function. This inadequate sampling is likely the result of too few quadrats sampled at the wetland edge relative to the size of the wetland. 
+
+
+
+## Effects on Diversity
+
+<figure>
+<img src="Images/Goosecropped.jpg"></figure><br>
 
 ```{r Site size and richness, echo=FALSE, message=FALSE, warning=FALSE}
 quaddies<-merge(sitesizes, RichInts, by="Site")
 quaddies$Latitude <- as.numeric(as.character(quaddies$Latitude))
 
-ggplot(RichInts, aes(x=sitesizes$Area, y=RichInts$RichnessObs, color=sitesizes$Quadrats)) +
-  geom_point()+
+ggplot(RichInts, aes(x=sitesizes$Area, y=RichInts$RichnessObs)) +
+  geom_point(size=3)+
   ylab("Site Richness")+
-  xlab(expression(Site~Area~(m^2)))+
-  labs(color = "Sample Size")+
-  ggtitle("Richness decreased with site area")+
+  xlab(expression(log~Site~Area~(m^2)))+
+  scale_x_log10()+
+  ggtitle("Richness decreases with site area")+
   theme(axis.title=element_text(size=14), plot.title = element_text(size=14))
 ```
 
-***
+There appears to be a relationship between site richness and site area, but unexpectedly this relationship appears to be negative. Because the data are likely non-linear, a generalized linear model should be used to assess this relationship.
+
+## Community Classification
+
+Similarity matrix
+
+Ordinations
+
+## 

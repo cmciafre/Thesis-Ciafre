@@ -30,17 +30,17 @@ library(lme4)
 library(recluster)
 library(cluster)
 ```
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
- vegdata<- read.csv("VEGDATAFINAL.csv", header=TRUE)
- abbrevcols<-read.csv("AbbrevCols.Fall2019.csv", header=TRUE)
+vegdata<-read.csv("data/VEGDATADONE.csv", header=TRUE)
+abbrevcols<-read.csv("Data/AbbrevCols.Fall2019.csv", header=TRUE)
 ```
 ```{r Prepare the data, include=FALSE}
 quadrich1<-count(vegdata, ID)
 quadrich<- quadrich1[-c(1),]
-merged<-cbind(quadrich, abbrevcols)
-incompdata<-filter(merged, Pond != "22", Pond != "23", Pond != "28")
+incompdata<-cbind(quadrich, abbrevcols)
 ```
 ### Background
 
