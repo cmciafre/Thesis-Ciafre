@@ -1,0 +1,131 @@
+---
+title: "Mixed Model"
+author: "C. M. Ciafre"
+date: "September 17, 2019"
+output: html_document
+---
+```{r setup2, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+packages_needed <- c("ggplot2", # graphics
+                     "dplyr",
+                     "arm", # display() etc.
+                     "MASS",
+                     "ggfortify",
+                     "nlme",
+                     "lme4",
+                     "recluster",
+                     "cluster")
+pk_to_install <- packages_needed [!( packages_needed %in% rownames(installed.packages())  )]
+if(length(pk_to_install)>0 ){
+  install.packages(pk_to_install,repos="http://cran.r-project.org")
+}
+#lapply(packages_needed, require, character.only = TRUE)
+library(ggplot2)
+library(dplyr)
+library(arm)
+library(MASS)
+library(ggfortify)
+library(nlme)
+library(lme4)
+library(recluster)
+library(cluster)
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+ vegdata<- read.csv("VEGDATAFINAL.csv", header=TRUE)
+ abbrevcols<-read.csv("AbbrevCols.Fall2019.csv", header=TRUE)
+```
+```{r Prepare the data, include=FALSE}
+quadrich1<-count(vegdata, ID)
+quadrich<- quadrich1[-c(1),]
+merged<-cbind(quadrich, abbrevcols)
+incompdata<-filter(merged, Pond != "22", Pond != "23", Pond != "28")
+```
+### Background
+
+I collected plant species data from 24 wetland sites across the Eastern Highland Rim ecoregion once in early summer and once in late summer. Each site was subsampled with a varying number of 1 m^2 quadrats, resulting in 923 subsamples.
+
+Fixed effects:
+  -Sampling season (early or late)
+  -Water permanence status (ephemeral or permanent)
+  -Site size class (small or medium or large)
+  
+Random effects:
+  -Plot
+  -Quadrat
+
+### Two ways to visualize trends in the data
+
+We can visualize all the quadrats at once and see if sampling season and water permanence affect quadrat level richness...
+(Note that sampling effort was halved for the late season to save time)
+```{r echo=FALSE}
+ggplot(incompdata, aes(x=Season, y=n, group=Permanence, color=Permanence))+
+  geom_line()+
+  geom_point()+
+  geom_jitter(width = 0.3)+
+  xlab("Sampling Season")+
+  ylab("Quadrat Richness")+
+  ggtitle("Quadrat richness between seasons")
+```
+
+Or we can examine the effects of season on each site using mean quadrat richness...
+```{r include=FALSE}
+meanbyplot <- aggregate(n ~ Pond:Season:Permanence:MTLength, data=merged, mean)
+```
+```{r echo=FALSE}
+ggplot(meanbyplot, aes(x=Season, y=n, color=Permanence))+
+  geom_line(aes(group=Pond))+
+  geom_point()+
+  xlab("Sampling Season")+
+  ylab("Mean Quadrat Richness")+
+  ggtitle("Mean quadrat richness of plots across seasons")
+```
+
+It also appears that site size has an effect on mean quadrat richness...
+(I used size classes rather than site radius to make things simpler)
+```{r include=FALSE}
+meanbyplot3 <- aggregate(n ~ Pond:Permanence:Size, data=merged, mean)
+```
+```{r echo=FALSE}
+ggplot(meanbyplot3, aes(x=Size, y=n, color=Permanence))+
+  geom_point()+
+  xlab("Site Radius (m)")+
+  ylab("Mean Quadrat Richness")+
+  ggtitle("Mean quadrat richness among sites of different sizes")
+```
+
+### Let's make some models
+```{r message=FALSE, warning=FALSE}
+#Fully crossed
+model1<-lmer(n~Permanence+Size+Season+Permanence:Size+Size:Season+Season:Permanence+Permanence:Size:Season+(1|Pond:Quadrat), data= incompdata)
+
+#Permanence:Size interaction only
+model2<-lmer(n~Permanence+Size+Season+Permanence:Size+(1|Pond:Quadrat), data= incompdata)
+
+#No interactions
+model3<-lmer(n~Permanence+Size+Season+(1|Pond:Quadrat), data= incompdata)
+
+#model2 without Season
+model4<-lmer(n~Permanence+Size+Permanence:Size+(1|Pond:Quadrat), data= incompdata)
+```
+
+```{r}
+anova(model1, model2)
+```
+
+Model 2 did not significantly differ from model 1 (p=0.632), so it is likely that the discarded interactions (the ones that did not make biological sense) were unimportant to the model.
+
+```{r}
+anova(model1, model3)
+anova(model2, model3)
+```
+
+To see if the remaining interaction term was meaningful, I removed it from model 3; as a consequence, model 3 was significantly different from both 1 and 2 (p=1.46e-4 and 2.71e-05). This indicates that the interaction between permanence and size is important to the model and should be left in.
+
+```{r}
+anova(model2, model4)
+```
+
+Because I was particularly interested in whether quadrat richness changed between sampling season, I removed that term from model 2. Because model 4 significantly differed from model 2 (p=0.00792), sampling season is likely important to the model and should be kept in. 
+

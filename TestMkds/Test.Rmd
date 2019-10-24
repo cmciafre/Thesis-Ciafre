@@ -1,0 +1,194 @@
+---
+title: "New Matrix"
+author: "C. M. Ciafre"
+date: "September 26, 2019"
+output: html_document
+---
+```{r Setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+packages_needed <- c("ggplot2", # graphics
+                     "dplyr",
+                     "arm", # display() etc.
+                     "MASS",
+                     "ggfortify",
+                     "nlme",
+                     "lme4",
+                     "recluster",
+                     "cluster",
+                     "knitr",
+                     "phytools",
+                     "vegan",
+                     "reshape",
+                     "mclust")
+pk_to_install <- packages_needed [!( packages_needed %in% rownames(installed.packages())  )]
+if(length(pk_to_install)>0 ){
+  install.packages(pk_to_install,repos="http://cran.r-project.org")
+}
+#lapply(packages_needed, require, character.only = TRUE)
+library(ggplot2)
+library(dplyr)
+library(arm)
+library(MASS)
+library(ggfortify)
+library(nlme)
+library(lme4)
+library(recluster)
+library(cluster)
+library(knitr)
+library(phytools)
+library(vegan)
+library(reshape)
+library(mclust)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+sppxsites<-read.csv("VEGDATAFINAL.csv", header=TRUE)
+abbrevcols<-read.csv("AbbrevCols.Fall2019.csv", header=TRUE)
+```
+
+```{r}
+#Change cover to numeric because for some reason it defaulted to factor
+sppxsites$TCover<-as.numeric(as.character(sppxsites$TCover))
+#Reconfigure data into presence-absence (but with abundance instead of 0's and 1's!)
+site.sp.quad <-as.data.frame(cast(sppxsites, Transect + Pond + Quadrat + ID ~ Species, value="TCover", fun= mean))
+#Just in case we want empty quadrats to be truly empty
+site.sp.quad.noempty<-subset(site.sp.quad, select=-c(Empty))
+#Make non-presences 0
+site.sp.quad.noempty[is.na(site.sp.quad.noempty)] <- 0
+
+```
+
+
+
+
+
+
+
+
+```{r}
+#In case we want to run ponds individually
+CEPOCC<-filter(site.sp.quad.noempty, Pond == 20|Pond == 21)
+HELLPOND<-filter(site.sp.quad.noempty, Pond == 1|Pond == 2)
+COOLBOIS<-filter(site.sp.quad.noempty, Pond == 8|Pond == 28)
+# Site02<-filter(site.sp.quad, Pond == 2)
+# Site03<-filter(site.sp.quad, Pond == 3)
+# Site04<-filter(site.sp.quad, Pond == 4)
+# Site05<-filter(site.sp.quad, Pond == 5)
+# Site06<-filter(site.sp.quad, Pond == 6)
+# Site07<-filter(site.sp.quad, Pond == 7)
+# Site08<-filter(site.sp.quad, Pond == 8)
+# Site09<-filter(site.sp.quad, Pond == 9)
+# Site10<-filter(site.sp.quad, Pond == 10)
+# Site11<-filter(site.sp.quad, Pond == 11)
+# Site12<-filter(site.sp.quad, Pond == 12)
+# Site13<-filter(site.sp.quad, Pond == 13)
+# Site14<-filter(site.sp.quad, Pond == 14)
+# Site16<-filter(site.sp.quad, Pond == 16)
+# Site17<-filter(site.sp.quad, Pond == 17)
+# Site18<-filter(site.sp.quad, Pond == 18)
+# Site19<-filter(site.sp.quad, Pond == 19)
+# Site20<-filter(site.sp.quad, Pond == 20)
+# Site21<-filter(site.sp.quad, Pond == 21)
+# Site22<-filter(site.sp.quad, Pond == 22)
+# Site23<-filter(site.sp.quad, Pond == 23)
+# Site24<-filter(site.sp.quad, Pond == 24)
+# Site25<-filter(site.sp.quad, Pond == 25)
+# Site26<-filter(site.sp.quad, Pond == 26)
+# Site27<-filter(site.sp.quad, Pond == 27)
+# Site28<-filter(site.sp.quad, Pond == 28)
+```
+
+USE THIS TUTORIAL https://ourcodingclub.github.io/2018/05/04/ordination.html#section6
+
+```{r}
+#Trim the variables off of the species data and remove empty quadrats and maybe unique species
+COOLBOIST<-subset(COOLBOIS, select=-c(1:5))
+COOLBOISTR<-COOLBOIST[rowSums(COOLBOIST) > 0,]
+COOLBOIS1<-COOLBOIS[rowSums(COOLBOIST) > 0,]
+#Remove trace unique species
+# site.sp.quad.nounique<-filter(function(x)(length(unique(x))>1), df1)
+# UngrazedTRN<-UngrazedTR[c(TRUE, lapply(UngrazedTR[-1], var, na.rm = TRUE) != 0)]
+
+#Make a distance matrix using bray-curtis
+data.dist01 <- vegdist(COOLBOISTR, method = "bray")
+#Make an nmds!!
+data.nmds01 <- metaMDS(data.dist01)
+#Check out the stress plot
+stressplot(data.nmds01)
+```
+
+```{r}
+#Identify number of clusters
+BIC<-mclustBIC(COOLBOISTR)
+plot(BIC)
+```
+```{r}
+cluster<-hclust(data.dist01, method="average")
+grp<-cutree(cluster,3)
+plot(data.nmds01, type="text")
+ordiellipse(data.nmds01, group=grp, display="sites", kind=c("sd"), draw="lines", conf=0.95, lwd=2.6, col="grey44")
+```
+
+```{r}
+#Connect site name to data points and make each site different colors
+NMDS1<-data.nmds01$points[,1]
+NMDS2<-data.nmds01$points[,2]
+nmds_combined<-data.frame(NMDS1=NMDS1, NMDS2=NMDS2, Pond=COOLBOIS1$Pond)
+split_list<-split(nmds_combined, nmds_combined$Pond)
+
+par(bg="ghostwhite")
+plot(data.nmds01$points[,1], data.nmds01$points[,2], type="n", bg="ghostwhite")
+points(split_list[[1]]$NMDS1, split_list[[1]]$NMDS2, pch=1, cex=0.8)
+points(split_list[[2]]$NMDS1, split_list[[2]]$NMDS2, pch=2, cex=0.8)
+cluster<-hclust(data.dist01, method="average")
+grp<-cutree(cluster,3)
+ordiellipse(data.nmds01, group=grp, display="sites", kind=c("sd"), draw="lines", conf=0.95, lwd=2.6, col="grey44")
+```
+
+
+
+
+```{r}
+cluster<-hclust(data.dist01, method="average")
+grp<-cutree(cluster,7)
+plot(grp)
+```
+
+```{r}
+ordiplot(data.nmds01, type="t")
+ordiellipse(data.nmds01, group=grp, display="sites", kind=c("sd"), draw="lines", conf=0.95, lwd=2.6, col="grey44")
+```
+
+```{r}
+#Trim the variables off of the species data and remove empty quadrats and maybe unique species
+HELLPONDT<-subset(HELLPOND, select=-c(1:5))
+HELLPONDTR<-HELLPONDT[rowSums(HELLPONDT) > 0,]
+#Remove trace unique species
+# site.sp.quad.nounique<-filter(function(x)(length(unique(x))>1), df1)
+# UngrazedTRN<-UngrazedTR[c(TRUE, lapply(UngrazedTR[-1], var, na.rm = TRUE) != 0)]
+
+#Make a distance matrix using bray-curtis
+data.dist02 <- vegdist(HELLPONDTR, method = "bray")
+#Make an nmds!!
+data.nmds01 <- metaMDS(data.dist01)
+#Check out the stress plot
+stressplot(data.nmds01)
+```
+
+```{r}
+#Connect site name to data points and make each site different colors
+NMDS1<-data.nmds01$points[,1]
+NMDS2<-data.nmds01$points[,2]
+nmds_combined<-data.frame(NMDS1=NMDS1, NMDS2=NMDS2, Pond=HELLPOND$Pond)
+split_list<-split(nmds_combined, nmds_combined$Pond)
+
+par(bg="ghostwhite")
+plot(data.nmds01$points[,1], data.nmds01$points[,2], type="n", bg="ghostwhite")
+points(split_list[[1]]$NMDS1, split_list[[1]]$NMDS2, pch=1, cex=0.8)
+points(split_list[[2]]$NMDS1, split_list[[2]]$NMDS2, pch=2, cex=0.8)
+cluster<-hclust(data.dist01, method="average")
+grp<-cutree(cluster,7)
+ordiellipse(data.nmds01, group=grp, display="sites", kind=c("sd"), draw="lines", conf=0.95, lwd=2.6, col="grey44")
+```
+
+

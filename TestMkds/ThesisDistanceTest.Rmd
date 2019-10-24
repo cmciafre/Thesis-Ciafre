@@ -1,0 +1,167 @@
+---
+title: "Mixed Models Practice: Effects on Quadrat Richness"
+author: "C. M. Ciafre"
+date: "September 23, 2019"
+output: html_document
+---
+
+```{r Setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+packages_needed <- c("ggplot2", # graphics
+                     "dplyr",
+                     "arm", # display() etc.
+                     "MASS",
+                     "ggfortify",
+                     "nlme",
+                     "lme4",
+                     "recluster",
+                     "cluster",
+                     "knitr",
+                     "phytools",
+                     "vegan")
+pk_to_install <- packages_needed [!( packages_needed %in% rownames(installed.packages())  )]
+if(length(pk_to_install)>0 ){
+  install.packages(pk_to_install,repos="http://cran.r-project.org")
+}
+#lapply(packages_needed, require, character.only = TRUE)
+library(ggplot2)
+library(dplyr)
+library(arm)
+library(MASS)
+library(ggfortify)
+library(nlme)
+library(lme4)
+library(recluster)
+library(cluster)
+library(knitr)
+library(phytools)
+library(vegan)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+sppxsites<-read.csv("VEGDATAFINAL.csv", header=TRUE)
+abbrevcols<-read.csv("AbbrevCols.Fall2019.csv", header=TRUE)
+```
+
+See https://ourcodingclub.github.io/2017/03/21/data-clustering.html for a tutorial on making this matrix.
+
+```{r Presence matrix, warning=TRUE, include=FALSE}
+#Species by site matrix
+sites_sub<-unique(sppxsites$ID)
+spp_sub<-unique(sppxsites$Species)
+
+#Make a matrix with loop function
+spp_commat <- matrix(0, length(sites_sub), length(spp_sub))
+for (i in 1:nrow(spp_commat)){temp_sites <- sppxsites[which(sppxsites$ID == sites_sub[i]),]
+  spp_commat[i, which(spp_sub%in%temp_sites$Species)]<- 1
+  print(i)}
+
+#Name rows and Columns
+rownames(spp_commat) <- as.character(sites_sub)
+colnames(spp_commat) <- as.character(spp_sub)
+dim(spp_commat)
+```
+
+```{r Make matrix into final dataframe, include=FALSE}
+#Change matrix into dataframe
+spp_commat.df<- as.data.frame(spp_commat)
+#Trim rando placeholder- MUST CHANGE WHEN ADDING DATA
+spp_commat.df.trimmed<- spp_commat.df[-c(1000),]
+#Make empty quadrats truly empty
+spp_commat.df.fixed<-subset(spp_commat.df.trimmed, select=-c(Empty))
+#Calculate quadrat-level richness
+sums<-as.data.frame(rowSums(spp_commat.df.fixed))
+colnames(sums) <- "Richness"
+#Merge it all together
+mergedcommat<-cbind(spp_commat.df.trimmed, abbrevcols, sums)
+```
+
+```{r Change better dataframe back into matrix}
+spp_commat_new<-as.matrix(spp_commat.df.trimmed)
+```
+
+```{r Trim the matrix}
+spp_commat_trim1 <- spp_commat_new[,which(!colSums(spp_commat_new) == 1)]
+dim(spp_commat_trim1)
+```
+
+```{r Make a bunch of trees}
+simpson_dist <- recluster.dist(spp_commat_trim2, dist="simpson")
+jaccard_dist <- recluster.dist(spp_commat_trim2, dist="jaccard")
+sorensen_dist <- recluster.dist(spp_commat_trim2, dist="sorensen")
+euclidian_dist <- vegdist(spp_commat_trim2, method="euclidean")
+
+bol_singlelink <- recluster.cons(spp_commat_trim2, tr = 100, p = 0.5, method = "single")
+bol_singlelink_cons <- bol_singlelink$cons
+plot(bol_singlelink_cons, direction = "downwards", cex = 0.5)
+write.tree(bol_singlelink_cons, "SingleSimpson.tre")
+
+bol_completelink <- recluster.cons(spp_commat_trim2, tr = 100, p = 0.5, method = "complete")
+bol_completelink_cons <- bol_completelink$cons
+plot(bol_completelink_cons, direction = "downwards", cex = 0.5)
+write.tree(bol_completelink_cons, "CompleteSimpson.tre")
+
+bol_ward <- recluster.cons(spp_commat_trim2, tr = 100, p = 0.5, method = "ward.D")
+bol_ward_cons <- bol_ward$cons
+plot(bol_ward_cons, direction = "downwards", cex = 0.5)
+write.tree(bol_ward_cons, "WardsMinVar.tre")
+```
+
+```{r}
+Site01<-filter(mergedcommat, Pond == 1)
+Site02<-filter(mergedcommat, Pond == 2)
+Site03<-filter(mergedcommat, Pond == 3)
+Site04<-filter(mergedcommat, Pond == 4)
+Site05<-filter(mergedcommat, Pond == 5)
+Site06<-filter(mergedcommat, Pond == 6)
+Site07<-filter(mergedcommat, Pond == 7)
+Site08<-filter(mergedcommat, Pond == 8)
+Site09<-filter(mergedcommat, Pond == 9)
+Site10<-filter(mergedcommat, Pond == 10)
+Site11<-filter(mergedcommat, Pond == 11)
+Site12<-filter(mergedcommat, Pond == 12)
+Site13<-filter(mergedcommat, Pond == 13)
+Site14<-filter(mergedcommat, Pond == 14)
+Site16<-filter(mergedcommat, Pond == 16)
+Site17<-filter(mergedcommat, Pond == 17)
+Site18<-filter(mergedcommat, Pond == 18)
+Site19<-filter(mergedcommat, Pond == 19)
+Site20<-filter(mergedcommat, Pond == 20)
+Site21<-filter(mergedcommat, Pond == 21)
+Site22<-filter(mergedcommat, Pond == 22)
+Site23<-filter(mergedcommat, Pond == 23)
+Site24<-filter(mergedcommat, Pond == 24)
+Site25<-filter(mergedcommat, Pond == 25)
+Site26<-filter(mergedcommat, Pond == 26)
+Site27<-filter(mergedcommat, Pond == 27)
+Site28<-filter(mergedcommat, Pond == 28)
+```
+
+USE THIS TUTORIAL https://ourcodingclub.github.io/2018/05/04/ordination.html#section6
+
+```{r}
+Site01.T<-subset(Site01, select=-c(580:591))
+data.dist01 <- vegdist(Site01.T, method = "bray", binary=TRUE)
+data.nmds01 <- metaMDS(data.dist01, k=10)
+```
+```{r}
+stressplot(data.nmds01)
+ordiplot(data.nmds01, type="t")
+```
+
+
+```{r}
+data.dist <- vegdist(spp_commat_trim2, method = "raup", binary=TRUE)
+data.dist2 <- vegdist(spp_commat_trim2, method = "jaccard", binary=TRUE)
+data.nmds <- metaMDS(data.dist)
+data.nmds2 <- metaMDS(data.dist2)
+```
+```{r}
+stressplot(data.nmds)
+stressplot(data.nmds2)
+```
+```{r}
+ordiplot(data.nmds, type="text")
+ordiplot(data.nmds2, type="text")
+```
+

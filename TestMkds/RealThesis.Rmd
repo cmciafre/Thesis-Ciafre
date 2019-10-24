@@ -1,0 +1,153 @@
+---
+title: "Mixed Models Practice: Effects on Quadrat Richness"
+author: "C. M. Ciafre"
+date: "September 23, 2019"
+output: html_document
+---
+
+```{r Setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+packages_needed <- c("ggplot2", # graphics
+                     "dplyr",
+                     "arm", # display() etc.
+                     "MASS",
+                     "ggfortify",
+                     "nlme",
+                     "lme4",
+                     "recluster",
+                     "cluster",
+                     "knitr")
+pk_to_install <- packages_needed [!( packages_needed %in% rownames(installed.packages())  )]
+if(length(pk_to_install)>0 ){
+  install.packages(pk_to_install,repos="http://cran.r-project.org")
+}
+#lapply(packages_needed, require, character.only = TRUE)
+library(ggplot2)
+library(dplyr)
+library(arm)
+library(MASS)
+library(ggfortify)
+library(nlme)
+library(lme4)
+library(recluster)
+library(cluster)
+library(knitr)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+sppxsites<-read.csv("VEGDATAFINAL.csv", header=TRUE)
+abbrevcols<-read.csv("AbbrevCols.Fall2019.csv", header=TRUE)
+```
+
+```{r Presence matrix, include=FALSE}
+#Species by site matrix
+sites_sub<-unique(sppxsites$ID)
+spp_sub<-unique(sppxsites$Species)
+
+#Make a matrix with loop function
+spp_commat <- matrix(0, length(sites_sub), length(spp_sub))
+for (i in 1:nrow(spp_commat)){temp_sites <- sppxsites[which(sppxsites$ID == sites_sub[i]),]
+  spp_commat[i, which(spp_sub%in%temp_sites$Species)]<- 1
+  print(i)}
+
+#Name rows and Columns
+rownames(spp_commat) <- as.character(sites_sub)
+colnames(spp_commat) <- as.character(spp_sub)
+dim(spp_commat)
+```
+
+```{r Make matrix into final dataframe, include=FALSE}
+#Change matrix into dataframe
+spp_commat.df<- as.data.frame(spp_commat)
+#Trim rando placeholder- MUST CHANGE WHEN ADDING DATA
+spp_commat.df.trimmed<- spp_commat.df[-c(1000),]
+#Make empty quadrats truly empty
+spp_commat.df.fixed<-subset(spp_commat.df.trimmed, select=-c(Empty))
+#Calculate quadrat-level richness
+sums<-as.data.frame(rowSums(spp_commat.df.fixed))
+colnames(sums) <- "Richness"
+#Merge it all together
+mergedcommat<-cbind(spp_commat.df.trimmed, abbrevcols, sums)
+```
+
+### Background
+
+I collected plant species data from 24 wetland sites across the Eastern Highland Rim ecoregion once in early summer and once in late summer. Each site was subsampled with a varying number of 1 m^2 quadrats, resulting in a total of 999 subsample units.
+
+Fixed effects:<br>
+  -Sampling season (early or late)<br>
+  -Water permanence status (ephemeral or permanent)<br>
+  -Site radius (continuous, in meters)<br>
+  
+Random effects:<br>
+  -Plot<br>
+  -Quadrat (nested within plot)<br>
+  
+This is a nested, uncrossed model. 
+
+![Abbreviated sample of data, including a species presence/absence matrix by quadrat and variables used for the analysis; 563 columns and 987 rows not shown.](Data.png)
+
+### Visualizing trends in the data
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(mergedcommat, aes(x=Season, y=Richness, group=Permanence, color=Permanence))+
+  geom_smooth()+
+  geom_point()+
+  geom_jitter(width = 0.3)+
+  xlab("Sampling Season")+
+  ylab("Quadrat Richness")+
+  ggtitle("Quadrat richness between seasons.")
+```
+
+```{r include=FALSE}
+plotmeans <- aggregate(Richness ~ Pond:Season:Permanence:MTLength, data=mergedcommat, mean)
+```
+```{r echo=FALSE}
+ggplot(plotmeans, aes(x=Season, y=Richness, color=Permanence))+
+  geom_line(aes(group=Pond))+
+  geom_point()+
+  xlab("Sampling Season")+
+  ylab("Mean Quadrat Richness")+
+  ggtitle("Mean quadrat richness of plots across seasons.")
+```
+
+```{r include=FALSE}
+plotmeans2 <- aggregate(Richness ~ Pond:Permanence:MTLength, data=mergedcommat, mean)
+```
+```{r echo=FALSE}
+ggplot(plotmeans2, aes(x=MTLength, y=Richness, color=Permanence))+
+  geom_point(size=2)+
+  xlab("Site Radius (m)")+
+  ylab("Mean Quadrat Richness")+
+  ggtitle("Mean quadrat richness among sites of different sizes.")
+```
+
+### Making the models
+```{r message=FALSE, warning=FALSE}
+#Fully crossed
+model1<-lmer(Richness~Permanence+MTLength+Season+Permanence:MTLength+MTLength:Season+Season:Permanence+Permanence:MTLength:Season+(1|Pond:Quadrat), data= mergedcommat)
+
+#All fixed variables but with Permanence:Size interaction only
+model2<-lmer(Richness~Permanence+MTLength+Season+Permanence:MTLength+(1|Pond:Quadrat), data= mergedcommat)
+
+#model2 without Season
+model4<-lmer(Richness~Permanence+MTLength+Permanence:MTLength+(1|Pond:Quadrat), data= mergedcommat)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+modelcomp1<-anova(model1, model2)
+kable(modelcomp1)
+```
+
+Model 2 did not significantly differ from model 1 (p=`r modelcomp1[2,8]`) and it has a lower AIC score, so it is likely that the discarded interactions (MTLength:Season, Season:Permanence, and Permanence:MTLength:Season) were unimportant to the model.
+
+```{r echo=FALSE, message=FALSE}
+modelcomp4<-anova(model2, model4)
+kable(modelcomp4)
+```
+
+Because I was interested in whether quadrat richness changed between sampling season, I removed that term from model 2. Because model 4 significantly differed from model 2 (p=`r modelcomp4[2,8]`), and because it has a higher AIC score, sampling season is likely important to the model and should be retained. 
+
+With the current data and variables, the best model is model 2:<br>
+<span style="color:blue">Richness~Permanence+MTLength+Season+Permanence:MTLength+(1|Pond:Quadrat)</span>
+

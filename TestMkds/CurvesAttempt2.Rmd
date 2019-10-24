@@ -1,0 +1,162 @@
+---
+title: "Curves Attempt 2"
+author: "C. M. Ciafre"
+date: "October 13, 2019"
+output: html_document
+---
+https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.html
+
+```{r setup, NOTICE USE of PACMAN, include=FALSE}
+#install pacman first to automatically install and load any needed packages
+pacman::p_load(ggplot2, dplyr, vegan, reshape, mclust,iNEXT)
+
+#Not sure why I keep this in
+knitr::opts_chunk$set(echo = TRUE)
+
+#Load data
+sppxsites<-read.csv("VEGDATADONE.csv", header=TRUE)
+sitenames<-read.csv("SiteNames.csv", header=TRUE)
+
+#Note: there is no Site 15; it was ditched halfway through sampling because it was not independent from Site 14.
+```
+
+
+```{r include=FALSE}
+sites_sub<-unique(sppxsites$ID)
+spp_sub<-unique(sppxsites$Species)
+
+#Make a matrix with loop function
+spp_commat <- matrix(0, length(sites_sub), length(spp_sub))
+for (i in 1:nrow(spp_commat)){temp_sites <- sppxsites[which(sppxsites$ID == sites_sub[i]),]
+  spp_commat[i, which(spp_sub%in%temp_sites$Species)]<- 1
+  print(i)}
+
+#Name rows and Columns
+rownames(spp_commat) <- as.character(sites_sub)
+colnames(spp_commat) <- as.character(spp_sub)
+
+#Change matrix into dataframe
+spp_commat.df<- as.data.frame(spp_commat)
+
+#Make empty quadrats truly empty
+spp_commat.df.fixed<-subset(spp_commat.df, select=-c(Empty))
+
+#Add site column back in and change its name
+AllPonds <- cbind(sitenames$Pond,spp_commat.df.fixed)
+names(AllPonds)[names(AllPonds)=="sitenames$Pond"] <- "Site"
+```
+
+```{r}
+#Break up AllPonds into dataframes by site
+#The first column has to be removed for each
+#Transpose the dataframes so species are columns
+
+S01<-t(select(filter(AllPonds, Site == 1), -1))
+S02<-t(select(filter(AllPonds, Site == 2), -1))
+S03<-t(select(filter(AllPonds, Site == 3), -1))
+S04<-t(select(filter(AllPonds, Site == 4), -1))
+S05<-t(select(filter(AllPonds, Site == 5), -1))
+S06<-t(select(filter(AllPonds, Site == 6), -1))
+S07<-t(select(filter(AllPonds, Site == 7), -1))
+S08<-t(select(filter(AllPonds, Site == 8), -1))
+S09<-t(select(filter(AllPonds, Site == 9), -1))
+S10<-t(select(filter(AllPonds, Site == 10), -1))
+S11<-t(select(filter(AllPonds, Site == 11), -1))
+S12<-t(select(filter(AllPonds, Site == 12), -1))
+S13<-t(select(filter(AllPonds, Site == 13), -1))
+S14<-t(select(filter(AllPonds, Site == 14), -1))
+S16<-t(select(filter(AllPonds, Site == 16), -1))
+S17<-t(select(filter(AllPonds, Site == 17), -1))
+S18<-t(select(filter(AllPonds, Site == 18), -1))
+S19<-t(select(filter(AllPonds, Site == 19), -1))
+S20<-t(select(filter(AllPonds, Site == 20), -1))
+S21<-t(select(filter(AllPonds, Site == 21), -1))
+S22<-t(select(filter(AllPonds, Site == 22), -1))
+S23<-t(select(filter(AllPonds, Site == 23), -1))
+S24<-t(select(filter(AllPonds, Site == 24), -1))
+S25<-t(select(filter(AllPonds, Site == 25), -1))
+S26<-t(select(filter(AllPonds, Site == 26), -1))
+S27<-t(select(filter(AllPonds, Site == 27), -1))
+S28<-t(select(filter(AllPonds, Site == 28), -1))
+```
+
+
+```{r}
+#List the dataframes, then convert them into incidence frequencies
+#I broke them into manageable chunks that graph more clearly than everything at once
+
+#Small sites
+site.list.1 = list(S04=S04, S07=S07, S08=S08, S18=S18, S28=S28)
+site.list.freq.1 = lapply(site.list.1, as.incfreq)
+
+#1,2,3
+site.list.2 = list(S01=S01, S02=S02, S11=S11)
+site.list.freq.2 = lapply(site.list.2, as.incfreq)
+
+#Large sites
+site.list.3 = list(S10=S10, S22=S22, S23=S23)
+site.list.freq.3 = lapply(site.list.3, as.incfreq)
+
+#
+site.list.4 = list(S06=S06, S09=S09, S13=S13, S17=S17)
+site.list.freq.4 = lapply(site.list.4, as.incfreq)
+
+site.list.5 = list(S05=S05, S19=S19)
+site.list.freq.5 = lapply(site.list.5, as.incfreq)
+
+site.list.6 = list(S20=S20, S21=S21, S25=S25)
+site.list.freq.6 = lapply(site.list.6, as.incfreq)
+
+site.list.7 = list(S03=S03, S16=S16, S26=S26)
+site.list.freq.7 = lapply(site.list.7, as.incfreq)
+
+site.list.8 = list(S12=S12, S14=S14, S24=S24, S27=S27)
+site.list.freq.8 = lapply(site.list.8, as.incfreq)
+
+
+#All sites
+site.list.all = list(S01=S01,S02=S02,S03=S03,S04=S04,S05=S05,S06=S06,S07=S07,S08=S08,S09=S09,S10=S10,S11=S11,S12=S12,S13=S13,S14=S14,S16=S16,S17=S17,S18=S18,S19=S19,S20=S20,S21=S21,S22=S22,S23=S23,S24=S24,S25=S25,S26=S26,S27=S27,S28=S28)
+site.list.freq.all = lapply(site.list.all, as.incfreq)
+```
+
+```{r}
+#Richness (q=0), Shannon Div (q=1), Simpson Div (q=2)
+out.inc1<-iNEXT(site.list.freq.1, q=0, datatype="incidence_freq", size=NULL)
+ggiNEXT(out.inc1, type=1, color.var="site") + 
+  theme_bw(base_size = 18) 
+
+out.inc1<-iNEXT(site.list.freq.2, q=0, datatype="incidence_freq", size=NULL)
+ggiNEXT(out.inc1, type=1, color.var="site") + 
+  theme_bw(base_size = 18) 
+
+out.inc1<-iNEXT(site.list.freq.3, q=0, datatype="incidence_freq", size=NULL)
+ggiNEXT(out.inc1, type=1, color.var="site") + 
+  theme_bw(base_size = 18) 
+
+out.inc1<-iNEXT(site.list.freq.4, q=0, datatype="incidence_freq", size=NULL)
+ggiNEXT(out.inc1, type=1, color.var="site") + 
+  theme_bw(base_size = 18) 
+
+out.inc1<-iNEXT(site.list.freq.5, q=0, datatype="incidence_freq", size=NULL)
+ggiNEXT(out.inc1, type=1, color.var="site") + 
+  theme_bw(base_size = 18) 
+
+out.inc1<-iNEXT(site.list.freq.6, q=0, datatype="incidence_freq", size=NULL)
+ggiNEXT(out.inc1, type=1, color.var="site") + 
+  theme_bw(base_size = 18) 
+
+out.inc1<-iNEXT(site.list.freq.7, q=0, datatype="incidence_freq", size=NULL)
+ggiNEXT(out.inc1, type=1, color.var="site") + 
+  theme_bw(base_size = 18) 
+
+out.inc1<-iNEXT(site.list.freq.all, q=0, datatype="incidence_freq", size=NULL)
+ggiNEXT(out.incall, type=1, color.var="site") + 
+  theme_bw(base_size = 18) 
+```
+
+```{r}
+
+```
+
+
+

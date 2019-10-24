@@ -1,0 +1,238 @@
+---
+title: "Funtime with basic multivariate techniques"
+author: "C. M. Ciafre"
+date: "September 27, 2019"
+output: html_document
+---
+```{r Setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+packages_needed <- c("ggplot2", # graphics
+                     "dplyr",
+                     "arm", # display() etc.
+                     "MASS",
+                     "ggfortify",
+                     "nlme",
+                     "lme4",
+                     "recluster",
+                     "cluster",
+                     "knitr",
+                     "phytools",
+                     "vegan",
+                     "reshape",
+                     "mclust")
+pk_to_install <- packages_needed [!( packages_needed %in% rownames(installed.packages())  )]
+if(length(pk_to_install)>0 ){
+  install.packages(pk_to_install,repos="http://cran.r-project.org")
+}
+#lapply(packages_needed, require, character.only = TRUE)
+library(ggplot2)
+library(dplyr)
+library(arm)
+library(MASS)
+library(ggfortify)
+library(nlme)
+library(lme4)
+library(recluster)
+library(cluster)
+library(knitr)
+library(phytools)
+library(vegan)
+library(reshape)
+library(mclust)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+sppxsites<-read.csv("VEGDATAFINAL.csv", header=TRUE)
+abbrevcols<-read.csv("AbbrevCols.Fall2019.csv", header=TRUE)
+```
+
+```{r}
+#Change cover to numeric because for some reason it defaulted to factor
+sppxsites$TCover<-as.numeric(as.character(sppxsites$RCover))
+#Reconfigure data into presence-absence (but with abundance instead of 0's and 1's!)
+site.sp.quad <-as.data.frame(cast(sppxsites, Transect + Pond + Quadrat + ID + Depth..m. ~ Species, value="TCover", fun= mean))
+#Just in case we want empty quadrats to be truly empty
+site.sp.quad.noempty<-subset(site.sp.quad, select=-c(Empty))
+#Make non-presences 0
+site.sp.quad.noempty[is.na(site.sp.quad.noempty)] <- 0
+```
+
+```{r}
+Dry<-as.data.frame(filter(site.sp.quad.noempty, Depth..m. == 0))
+Wet<-as.data.frame(filter(site.sp.quad.noempty, Depth..m. > 0))
+
+# DryT<-subset(Dry, select=-c(1:6))
+# WetT<-subset(Wet, select=-c(1:6))
+# 
+# DryTR<-DryT[rowSums(DryT) > 0,]
+# WetTR<-WetT[rowSums(WetT) > 0,]
+
+```
+
+```{r}
+#Split data by site
+Site01D<-(colMeans(subset(filter(Dry, Pond == 1), select=-c(1:6))))
+Site02D<-(colMeans(subset(filter(Dry, Pond == 2), select=-c(1:6))))
+Site03D<-(colMeans(subset(filter(Dry, Pond == 3), select=-c(1:6))))
+Site04D<-(colMeans(subset(filter(Dry, Pond == 4), select=-c(1:6))))
+Site05D<-(colMeans(subset(filter(Dry, Pond == 5), select=-c(1:6))))
+Site06D<-(colMeans(subset(filter(Dry, Pond == 6), select=-c(1:6))))
+Site07D<-(colMeans(subset(filter(Dry, Pond == 7), select=-c(1:6))))
+Site08D<-(colMeans(subset(filter(Dry, Pond == 8), select=-c(1:6))))
+Site09D<-(colMeans(subset(filter(Dry, Pond == 9), select=-c(1:6))))
+Site10D<-(colMeans(subset(filter(Dry, Pond == 10), select=-c(1:6))))
+Site11D<-(colMeans(subset(filter(Dry, Pond == 11), select=-c(1:6))))
+Site12D<-(colMeans(subset(filter(Dry, Pond == 12), select=-c(1:6))))
+Site13D<-(colMeans(subset(filter(Dry, Pond == 13), select=-c(1:6))))
+Site14D<-(colMeans(subset(filter(Dry, Pond == 14), select=-c(1:6))))
+Site16D<-(colMeans(subset(filter(Dry, Pond == 16), select=-c(1:6))))
+Site17D<-(colMeans(subset(filter(Dry, Pond == 17), select=-c(1:6))))
+Site18D<-(colMeans(subset(filter(Dry, Pond == 18), select=-c(1:6))))
+Site19D<-(colMeans(subset(filter(Dry, Pond == 19), select=-c(1:6))))
+Site20D<-(colMeans(subset(filter(Dry, Pond == 20), select=-c(1:6))))
+Site21D<-(colMeans(subset(filter(Dry, Pond == 21), select=-c(1:6))))
+Site22D<-(colMeans(subset(filter(Dry, Pond == 22), select=-c(1:6))))
+Site23D<-(colMeans(subset(filter(Dry, Pond == 23), select=-c(1:6))))
+Site24D<-(colMeans(subset(filter(Dry, Pond == 24), select=-c(1:6))))
+Site25D<-(colMeans(subset(filter(Dry, Pond == 25), select=-c(1:6))))
+Site26D<-(colMeans(subset(filter(Dry, Pond == 26), select=-c(1:6))))
+Site27D<-(colMeans(subset(filter(Dry, Pond == 27), select=-c(1:6))))
+Site28D<-(colMeans(subset(filter(Dry, Pond == 28), select=-c(1:6))))
+
+SiteMeansLongD<-as.data.frame(cbind(Site01D, Site02D, Site03D, Site04D, Site05D, Site06D, Site07D, Site08D, Site09D, Site10D, Site11D, Site12D, Site13D, Site14D, Site16D, Site17D, Site18D, Site19D, Site20D, Site21D, Site22D, Site23D, Site24D, Site25D, Site26D, Site27D, Site28D))
+
+SiteMeansD<-as.data.frame(t(SiteMeansLongD))
+SiteMeansDT<-na.omit(SiteMeansD)
+SiteMeansDF <- SiteMeansDT[,which(!colSums(SiteMeansDT) == 0)]
+
+```
+
+```{r}
+#Make a distance matrix using bray-curtis
+data.distD <- vegdist(SiteMeansDF, method = "bray")
+#Make an nmds!!
+data.nmdsD <- metaMDS(data.distD)
+#Check out the stress plot to make sure it's linear-ish
+stressplot(data.nmdsD)
+```
+
+
+```{r}
+#Identify number of clusters
+BIC.D<-mclustBIC(SiteMeansDF)
+plot(BIC.D)
+```
+```{r}
+ordiplot(data.nmdsD, type="t")
+```
+
+```{r}
+#Split data by site
+Site01W<-(colMeans(subset(filter(Wet, Pond == 1), select=-c(1:6))))
+Site02W<-(colMeans(subset(filter(Wet, Pond == 2), select=-c(1:6))))
+Site03W<-(colMeans(subset(filter(Wet, Pond == 3), select=-c(1:6))))
+Site04W<-(colMeans(subset(filter(Wet, Pond == 4), select=-c(1:6))))
+Site05W<-(colMeans(subset(filter(Wet, Pond == 5), select=-c(1:6))))
+Site06W<-(colMeans(subset(filter(Wet, Pond == 6), select=-c(1:6))))
+Site07W<-(colMeans(subset(filter(Wet, Pond == 7), select=-c(1:6))))
+Site08W<-(colMeans(subset(filter(Wet, Pond == 8), select=-c(1:6))))
+Site09W<-(colMeans(subset(filter(Wet, Pond == 9), select=-c(1:6))))
+Site10W<-(colMeans(subset(filter(Wet, Pond == 10), select=-c(1:6))))
+Site11W<-(colMeans(subset(filter(Wet, Pond == 11), select=-c(1:6))))
+Site12W<-(colMeans(subset(filter(Wet, Pond == 12), select=-c(1:6))))
+Site13W<-(colMeans(subset(filter(Wet, Pond == 13), select=-c(1:6))))
+Site14W<-(colMeans(subset(filter(Wet, Pond == 14), select=-c(1:6))))
+Site16W<-(colMeans(subset(filter(Wet, Pond == 16), select=-c(1:6))))
+Site17W<-(colMeans(subset(filter(Wet, Pond == 17), select=-c(1:6))))
+Site18W<-(colMeans(subset(filter(Wet, Pond == 18), select=-c(1:6))))
+Site19W<-(colMeans(subset(filter(Wet, Pond == 19), select=-c(1:6))))
+Site20W<-(colMeans(subset(filter(Wet, Pond == 20), select=-c(1:6))))
+Site21W<-(colMeans(subset(filter(Wet, Pond == 21), select=-c(1:6))))
+Site22W<-(colMeans(subset(filter(Wet, Pond == 22), select=-c(1:6))))
+Site23W<-(colMeans(subset(filter(Wet, Pond == 23), select=-c(1:6))))
+Site24W<-(colMeans(subset(filter(Wet, Pond == 24), select=-c(1:6))))
+Site25W<-(colMeans(subset(filter(Wet, Pond == 25), select=-c(1:6))))
+Site26W<-(colMeans(subset(filter(Wet, Pond == 26), select=-c(1:6))))
+Site27W<-(colMeans(subset(filter(Wet, Pond == 27), select=-c(1:6))))
+Site28W<-(colMeans(subset(filter(Wet, Pond == 28), select=-c(1:6))))
+
+SiteMeansLongW<-as.data.frame(cbind(Site01W, Site02W, Site03W, Site04W, Site05W, Site06W, Site07W, Site08W, Site09W, Site10W, Site11W, Site12W, Site13W, Site14W, Site16W, Site17W, Site18W, Site19W, Site20W, Site21W, Site22W, Site23W, Site24W, Site25W, Site26W, Site27W, Site28W))
+SiteMeansW<-as.data.frame(t(SiteMeansLongW))
+SiteMeansWT<-na.omit(SiteMeansW)
+SiteMeansWF <- SiteMeansWT[,which(!colSums(SiteMeansWT) == 0)]
+
+
+```
+
+```{r}
+#Make a distance matrix using bray-curtis
+data.distW <- vegdist(SiteMeansWF, method = "bray")
+#Make an nmds!!
+data.nmdsW <- metaMDS(data.distW)
+#Check out the stress plot to make sure it's linear-ish
+stressplot(data.nmdsW)
+```
+
+```{r}
+#Identify number of clusters
+BIC.W<-mclustBIC(SiteMeansWF)
+plot(BIC.W)
+```
+
+```{r}
+ordiplot(data.nmdsW, type="t")
+```
+
+```{r}
+merged<-rbind(SiteMeansW, SiteMeansD)
+merged[is.na(merged)] <- 0
+SiteMeansW$Wetness <- 'W'
+SiteMeansD$Wetness <- 'D'
+merged2<-rbind(SiteMeansW, SiteMeansD)
+# mergedTT<-na.omit(merged2)
+merged2[is.na(merged2)] <- 0
+merged.1<-subset(merged, select=-Wetness)
+mergedF <- merged.1[,which(!colSums(merged.1) == 0)]
+# mergedFF<-mergedF[,which(!rowSums(mergedF) == 0)]
+# mergedFF<-mergedF[is.na(mergedF)] <- 0
+mergedFF<- na.omit(mergedF) 
+```
+
+```{r}
+#Make a distance matrix using bray-curtis
+data.distM <- vegdist(mergedFF, method = "bray")
+data.distMO <- na.omit(data.distM) 
+#Make an nmds!!
+data.nmdsM <- metaMDS(data.distMO)
+#Check out the stress plot to make sure it's linear-ish
+stressplot(data.nmdsM)
+```
+
+```{r}
+#Identify number of clusters
+BIC.M<-mclustBIC(mergedFF)
+plot(BIC.M)
+```
+
+```{r}
+
+
+ordiplot(data.nmdsM, type="t")
+# ordiellipse(data.nmdsM, groups= mergedTT$Wetness, display="sites", kind = "sd", conf=0.95, draw = "lines")
+```
+
+```{r}
+data.scores <- as.data.frame(scores(data.nmdsM))
+
+
+ggplot(data.scores, aes(NMDS1, NMDS2, color=mergedTT$Wetness, label=))+
+  geom_point()+
+  labs(color = "Inundation")+
+  ggtitle("NMDS, sites separated by inundation")
+```
+
+
+
+
+
+
