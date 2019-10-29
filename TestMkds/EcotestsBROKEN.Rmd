@@ -1,0 +1,113 @@
+---
+title: "Evenness and distance matrices"
+author: "C. M. Ciafre"
+date: "October 23, 2019"
+output: html_document
+---
+
+```{r setup, NOTICE USE of PACMAN, include=FALSE}
+#install pacman first to automatically install and load any needed packages
+pacman::p_load(ggplot2, dplyr, tidyr, reshape, iNEXT, knitr, kableExtra, ggfortify, ggpubr, vegan)
+
+#Not sure why I keep this in
+knitr::opts_chunk$set(echo = TRUE)
+
+#Load data
+sppxsites<-read.csv("VEGDATADONE.csv", header=TRUE)
+sitenames<-read.csv("SiteNames.csv", header=TRUE)
+sitesizes<-read.csv("SiteXsize2.csv", header=TRUE)
+quaddatas<-read.csv("quadmetrics.csv", header=TRUE)
+colnames(quaddatas)[colnames(quaddatas)=="Depth..m."] <- "Depth"
+colnames(quaddatas)[colnames(quaddatas)=="X..Canopy"] <- "Canopy"
+colnames(quaddatas)[colnames(quaddatas)=="Pond"] <- "Site"
+#Note: there is no Site 15; it was ditched halfway through sampling because it was not independent from Site 14.
+```
+
+## GLMM
+
+```{r echo=FALSE}
+quaddies<-merge(sitesizes, RichInts, by="Site")
+quaddies$Latitude <- as.numeric(as.character(quaddies$Latitude))
+quaddiesT<-filter(quaddies, Site!="S08")
+quaddiesT2<-filter(quaddiesT, Site!="S28")
+
+
+quaddie.glm<-glm(formula = RichnessObs ~ DepthChange, family = gaussian(link = log), data = quaddies)
+summary(quaddie.glm)
+
+autoplot(quaddie.glm)
+
+quaddie2.glm<-glm(formula = RichnessObs ~ DepthChange, family = gaussian(link = log), data = quaddiesT2)
+summary(quaddie2.glm)
+```
+
+```{r echo=FALSE}
+ggplot(quaddies, aes(x=DepthChange, y=RichnessObs))+
+  geom_text(label=quaddies$Site, color="black", size=3)+
+  geom_smooth(method="glm", method.args=list(family="gaussian"(link="log"))) +
+  xlab("Depth Change (m)")+
+  ylab("Observed Site Richness")+
+  ggtitle("Effect of hydrologic stability on site richness")
+```
+
+```{r}
+gamma<-ncol(AllPonds)-1
+gamma
+```
+
+```{r echo=FALSE}
+ggplot(quaddiesT2, aes(x=DepthChange, y=RichnessObs))+
+  geom_text(label=quaddiesT2$Site, color="black", size=3)+
+  geom_smooth(method="glm", method.args=list(family="poisson"(link="log"))) +
+  xlab("Depth Change (m)")+
+  ylab("Observed Site Richness")+
+  ggtitle("Effect of hydrologic stability on site richness, with sites 08 and 28 excluded")
+```
+
+```{r}
+sum01<-rowSums(S01)
+sum02<-rowSums(S02)
+sum03<-rowSums(S03)
+sum04<-rowSums(S04)
+sum05<-rowSums(S05)
+sum06<-rowSums(S06)
+sum07<-rowSums(S07)
+sum08<-rowSums(S08)
+sum09<-rowSums(S09)
+sum10<-rowSums(S10)
+sum11<-rowSums(S11)
+sum12<-rowSums(S12)
+sum13<-rowSums(S13)
+sum14<-rowSums(S14)
+sum16<-rowSums(S16)
+sum17<-rowSums(S17)
+sum18<-rowSums(S18)
+sum19<-rowSums(S19)
+sum20<-rowSums(S20)
+sum21<-rowSums(S21)
+sum22<-rowSums(S22)
+sum23<-rowSums(S23)
+sum24<-rowSums(S24)
+sum25<-rowSums(S25)
+sum26<-rowSums(S26)
+sum27<-rowSums(S27)
+sum28<-rowSums(S28)
+
+summary<-as.data.frame(rbind(sum01, sum02, sum03, sum04, sum05, sum06, sum07, sum08, sum09, sum10, sum11, sum12, sum13, sum14, sum16, sum17, sum18, sum19, sum20, sum21, sum22, sum23, sum24, sum25, sum26, sum27, sum28))
+#HOW DO I DELETE SINGLETONS
+sumsums<-rbind(sums, summary)
+
+filter(sumsums, 1 > 1)
+
+
+summary[summary > 0] <- 1
+
+
+jaccard<-vegdist(summary, method="bray", binary=FALSE, diag=TRUE, upper=FALSE, na.rm = FALSE)
+as.matrix(jaccard)
+```
+
+
+
+
+

@@ -1,6 +1,6 @@
 ---
-title: "Deterministic processes drive wetland plant community composition and diversity in the Eastern Highland Rim"
-author: "C. M. Ciafre"
+title: "Deterministic processes drive wetland plant community composition and diversity"
+author: "C. M. Ciafré"
 output:
   html_notebook:
     df_print: paged
@@ -11,10 +11,9 @@ output:
 
 ---
 #   {.tabset .tabset-fade}
-
 ```{r setup, NOTICE USE of PACMAN, include=FALSE}
 #install pacman first to automatically install and load any needed packages
-pacman::p_load(ggplot2, dplyr, tidyr, reshape, iNEXT, knitr, kableExtra, ggfortify, ggpubr, vegan)
+pacman::p_load(ggplot2, dplyr, tidyr, reshape, iNEXT, knitr, kableExtra, ggfortify, ggpubr, vegan, geosphere, mclust)
 
 #Not sure why I keep this in
 knitr::opts_chunk$set(echo = TRUE)
@@ -327,20 +326,122 @@ quaddies<-merge(sitesizes, RichInts, by="Site")
 quaddies$Latitude <- as.numeric(as.character(quaddies$Latitude))
 
 ggplot(RichInts, aes(x=sitesizes$Area, y=RichInts$RichnessObs)) +
-  geom_point(size=3)+
-  ylab("Site Richness")+
-  xlab(expression(log~Site~Area~(m^2)))+
-  scale_x_log10()+
-  ggtitle("Richness decreases with site area")+
+  geom_point(size=2)+
+  ylab("Site richness")+
+  xlab(expression(Site~area~(m^2)))+
+  ggtitle("Site area does not have a positive affect on site richness")+
   theme(axis.title=element_text(size=14), plot.title = element_text(size=14))
 ```
 
 There appears to be a relationship between site richness and site area, but unexpectedly this relationship appears to be negative. Because the data are likely non-linear, a generalized linear model should be used to assess this relationship.
 
+
+
+
 ## Community Classification
 
-Similarity matrix
+```{r Sorensen time, include=FALSE}
+sum01<-rowSums(S01)
+sum02<-rowSums(S02)
+sum03<-rowSums(S03)
+sum04<-rowSums(S04)
+sum05<-rowSums(S05)
+sum06<-rowSums(S06)
+sum07<-rowSums(S07)
+sum08<-rowSums(S08)
+sum09<-rowSums(S09)
+sum10<-rowSums(S10)
+sum11<-rowSums(S11)
+sum12<-rowSums(S12)
+sum13<-rowSums(S13)
+sum14<-rowSums(S14)
+sum16<-rowSums(S16)
+sum17<-rowSums(S17)
+sum18<-rowSums(S18)
+sum19<-rowSums(S19)
+sum20<-rowSums(S20)
+sum21<-rowSums(S21)
+sum22<-rowSums(S22)
+sum23<-rowSums(S23)
+sum24<-rowSums(S24)
+sum25<-rowSums(S25)
+sum26<-rowSums(S26)
+sum27<-rowSums(S27)
+sum28<-rowSums(S28)
+
+summary<-as.data.frame(rbind(sum01, sum02, sum03, sum04, sum05, sum06, sum07, sum08, sum09, sum10, sum11, sum12, sum13, sum14, sum16, sum17, sum18, sum19, sum20, sum21, sum22, sum23, sum24, sum25, sum26, sum27, sum28))
+#TO DELETE SINGLETONS
+sumsums<-rbind(sums, summary)
+rownames(sumsums)[1]<-"sum"
+sumsums1 = sumsums[,sums > 1]
+ncol(sumsums[,sums == 1])
+#235** singletons!
+
+#Convert to binary
+sumsums1[sumsums1 > 0] <- 1
+
+sumsums2<-slice(sumsums1, -c(1))
+
+#0=identical, 1=the most dissimilar
+sorensen<-vegdist(sumsums2, method="bray", binary=TRUE, diag=TRUE, upper=FALSE, na.rm = FALSE)
+sorensen.m<-as.matrix(sorensen)
+sorensen.m.t<-signif(sorensen.m, digits = 3)
+```
+
+```{r Distance Matrix, include=FALSE}
+sitesizesgeo<-select(sitesizes, c("Site", "Latitude", "Longitude"))
+sitesizesgeo.1<-sitesizesgeo[,c(1,3,2)]
+sitesizesgeo.2<-sitesizesgeo.1[,c(2,3)]
+distance.m<-distm(sitesizesgeo.2)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#This is really sloppy
+sorensencol<-as.data.frame(sorensen.m.t)
+distancecol<-as.data.frame(distance.m)
+sorensenmelt<-melt(sorensencol, variable.name = 'Sorensen')
+geographicmelt<-melt(distancecol, variable.name = 'Geographic')
+distance.1<-cbind(geographicmelt, sorensenmelt)
+names(distance.1)<-c("Var1", "geographic", "Var2", "Sorensen")
+#Remove zero's because they occur whwere sites match
+distance.f<-filter(distance.1, geographic > 0)
+```
+
+```{r NMDS, echo=FALSE, message=FALSE, warning=FALSE}
+sorensen.nmds01 <- metaMDS(sorensen, k=10)
+sorstressplot<-stressplot(sorensen.nmds01)
+
+cluster<-hclust(sorensen, method="average")
+grp<-cutree(cluster,6)
+plot(sorensen.nmds01, type="text")
+ordicluster(sorensen.nmds01, cluster, prune = 7, display = "sites",
+         w = weights(sorensen.nmds01, display))
+# ordiellipse(sorensen.nmds01, group=grp, display="sites", kind=c("sd"), draw="lines", conf=0.95, lwd=2.6, col="grey44")
+```
+### Which sites are similar?
+
+There may be a lot of overlap in clusters due to the nestedness of some community types. We should revisit this later using quadrats as replicates.
+
+### Are sites similar because they're geographically closer?
+
+```{r}
+ggplot(distance.f, aes(x=distance.f$geographic, y=distance.f$Sorensen)) +
+  geom_point()+
+  geom_smooth(method="glm", method.args=list(family="binomial"(link="logit")))+
+  ylab("Sorensen dissimilarity index")+
+  xlab("Geographic distance (m)")+
+  ggtitle("Geographic distance between sites has no effect on species similarity")+
+  coord_cartesian(ylim = c(0, 1))
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+distance.glm<-glm(Sorensen~geographic, family=binomial, data=distance.f)
+summary(distance.glm)
+```
 
 Ordinations
 
-## 
+## Implications
+
+Plant communities aren't real. We can all go home now.
