@@ -1,14 +1,15 @@
 ---
 title: "Deterministic processes drive wetland plant community composition and diversity"
-author: "C. M. Ciafré"
+author: "C. M. Ciafre"
 output:
+  html_document:
+    df_print: paged
   html_notebook:
     df_print: paged
-    rows.print: 10
-    theme: journal
     highlight: zenburn
     number_sections: no
-
+    rows.print: 10
+    theme: journal
 ---
 #   {.tabset .tabset-fade}
 ```{r setup, NOTICE USE of PACMAN, include=FALSE}
@@ -370,6 +371,7 @@ sum27<-rowSums(S27)
 sum28<-rowSums(S28)
 
 summary<-as.data.frame(rbind(sum01, sum02, sum03, sum04, sum05, sum06, sum07, sum08, sum09, sum10, sum11, sum12, sum13, sum14, sum16, sum17, sum18, sum19, sum20, sum21, sum22, sum23, sum24, sum25, sum26, sum27, sum28))
+sums<-colSums(summary)
 #TO DELETE SINGLETONS
 sumsums<-rbind(sums, summary)
 rownames(sumsums)[1]<-"sum"
@@ -407,10 +409,14 @@ names(distance.1)<-c("Var1", "geographic", "Var2", "Sorensen")
 distance.f<-filter(distance.1, geographic > 0)
 ```
 
-```{r NMDS, echo=FALSE, message=FALSE, warning=FALSE}
+```{r NMDS prep, include=FALSE}
 sorensen.nmds01 <- metaMDS(sorensen, k=10)
 sorstressplot<-stressplot(sorensen.nmds01)
 
+```
+
+
+```{r NMDS, echo=FALSE, message=FALSE, warning=FALSE}
 cluster<-hclust(sorensen, method="average")
 grp<-cutree(cluster,6)
 plot(sorensen.nmds01, type="text")
@@ -418,13 +424,14 @@ ordicluster(sorensen.nmds01, cluster, prune = 7, display = "sites",
          w = weights(sorensen.nmds01, display))
 # ordiellipse(sorensen.nmds01, group=grp, display="sites", kind=c("sd"), draw="lines", conf=0.95, lwd=2.6, col="grey44")
 ```
+
 ### Which sites are similar?
 
 There may be a lot of overlap in clusters due to the nestedness of some community types. We should revisit this later using quadrats as replicates.
 
 ### Are sites similar because they're geographically closer?
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ggplot(distance.f, aes(x=distance.f$geographic, y=distance.f$Sorensen)) +
   geom_point()+
   geom_smooth(method="glm", method.args=list(family="binomial"(link="logit")))+
