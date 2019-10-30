@@ -14,7 +14,7 @@ output:
 #   {.tabset .tabset-fade}
 ```{r setup, NOTICE USE of PACMAN, include=FALSE}
 #install pacman first to automatically install and load any needed packages
-pacman::p_load(ggplot2, dplyr, tidyr, reshape, iNEXT, knitr, kableExtra, ggfortify, ggpubr, vegan, geosphere, mclust, rgdal, leaflet)
+pacman::p_load(ggplot2, dplyr, tidyr, reshape, iNEXT, knitr, kableExtra, ggfortify, ggpubr, vegan, geosphere, mclust, rgdal, leaflet, ggmap)
 
 #Not sure why I keep this in
 knitr::opts_chunk$set(echo = TRUE)
@@ -38,7 +38,7 @@ site_points <- select(sitesizes, c("Site", "Latitude", "Longitude"))
 
 ### Data Collection
 
-Plots were sampled at 27 independent sites throughout a subset of the Eastern Highland Rim ecoregion. 
+Plots were sampled at 27 independent sites throughout a subset of the Eastern Highland Rim ecoregion (delineated in tan below). Note that some sites were also in close proximity, making them difficult to see at broader zoom levels.
 ```{r Static map prep, message=FALSE, warning=FALSE, include=FALSE}
 EHRa <- readOGR("MappyBits/a.kml")
 EHRb <- readOGR("MappyBits/b.kml")
@@ -138,84 +138,155 @@ outline_polyl <- SpatialPolygons(list(sp_outlinel))
 proj4string(outline_polyl) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
 ```
 
-Sites had differing dominant vegetation types; click the points below for details. Also note that some sites were also in close proximity, making them difficult to see at broader zoom levels.
+
 ```{r Static map, echo=FALSE, message=FALSE, warning=FALSE}
-state <- map_data("state")
-county <- map_data("county")
+# state <- map_data("state")
+# county <- map_data("county")
+# 
+# 
+# tn <- county %>%
+#   filter(region=="tennessee")
+# ky <- county %>%
+#   filter(region=="kentucky")
+# al <- county %>%
+#   filter(region=="alabama")
 
 
-tn <- county %>% 
-  filter(region=="tennessee")
-ky <- county %>% 
-  filter(region=="kentucky")
-al <- county %>% 
-  filter(region=="alabama")
-
-
-ggplot() +  
-  geom_polygon(data = state, aes(x=long, y = lat, group = group),
-                        fill = "white", color="black") +
-  geom_polygon(data = tn, aes(x=long, y = lat, group = group),
-                        fill = "white", color="black") +
-  geom_polygon(data = ky, aes(x=long, y = lat, group = group),
-                        fill = "white", color="black") +
-  geom_polygon(data = al, aes(x=long, y = lat, group = group),
-                        fill = "white", color="black") +
-  geom_polygon(data=outline_polya, aes(x=outline_polya@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polya@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polyb, aes(x=outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polyc, aes(x=outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polyd, aes(x=outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polye, aes(x=outline_polye@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polye@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polyf, aes(x=outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polyg, aes(x=outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polyh, aes(x=outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polyi, aes(x=outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polyj, aes(x=outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polyk, aes(x=outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_polygon(data=outline_polyl, aes(x=outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,1],
-                                      y=outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,2]),
-               alpha = .8, fill="orange") +
-  geom_point(data = site_points, aes(x=Longitude,y=Latitude), color="black") +
-  coord_fixed(xlim = c(-90.5, -82),  ylim = c(34.5, 37.6), ratio = 1.2) +
-  xlab("Longitude") + ylab("Latitude") + ggtitle("Eastern Highland Rim subset (gold) and study sites")
+# ggplot() +
+#   geom_polygon(data = state, aes(x=long, y = lat, group = group),
+#                         fill = "white", color="black") +
+#   geom_polygon(data = tn, aes(x=long, y = lat, group = group),
+#                         fill = "white", color="black") +
+#   geom_polygon(data = ky, aes(x=long, y = lat, group = group),
+#                         fill = "white", color="black") +
+#   geom_polygon(data = al, aes(x=long, y = lat, group = group),
+#                         fill = "white", color="black") +
+#   geom_polygon(data=outline_polya, aes(x=outline_polya@polygons[[1]]@Polygons[[1]]@coords[,1],
+#                                       y=outline_polya@polygons[[1]]@Polygons[[1]]@coords[,2]),
+#                alpha = .8, fill="orange") +
+#   geom_polygon(data=outline_polyb, aes(x=outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,1],
+#                                       y=outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,2]),
+#                alpha = .8, fill="orange") +
+#   geom_polygon(data=outline_polyc, aes(x=outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,1],
+  #                                     y=outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,2]),
+  #              alpha = .8, fill="orange") +
+  # geom_polygon(data=outline_polyd, aes(x=outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,1],
+  #                                     y=outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,2]),
+  #              alpha = .8, fill="orange") +
+  # geom_polygon(data=outline_polye, aes(x=outline_polye@polygons[[1]]@Polygons[[1]]@coords[,1],
+  #                                     y=outline_polye@polygons[[1]]@Polygons[[1]]@coords[,2]),
+  #              alpha = .8, fill="orange") +
+  # geom_polygon(data=outline_polyf, aes(x=outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,1],
+  #                                     y=outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,2]),
+  #              alpha = .8, fill="orange") +
+  # geom_polygon(data=outline_polyg, aes(x=outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,1],
+  #                                     y=outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,2]),
+  #              alpha = .8, fill="orange") +
+  # geom_polygon(data=outline_polyh, aes(x=outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,1],
+  #                                     y=outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,2]),
+  #              alpha = .8, fill="orange") +
+  # geom_polygon(data=outline_polyi, aes(x=outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,1],
+  #                                     y=outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,2]),
+  #              alpha = .8, fill="orange") +
+  # geom_polygon(data=outline_polyj, aes(x=outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,1],
+  #                                     y=outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,2]),
+  #              alpha = .8, fill="orange") +
+  # geom_polygon(data=outline_polyk, aes(x=outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,1],
+  #                                     y=outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,2]),
+  #              alpha = .8, fill="orange") +
+  # geom_polygon(data=outline_polyl, aes(x=outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,1],
+  #                                     y=outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,2]),
+  #              alpha = .8, fill="orange") +
+  # geom_point(data = site_points, aes(x=Longitude,y=Latitude), color="black") +
+  # # coord_fixed(xlim = c(-90.5, -82),  ylim = c(34.5, 37.6), ratio = 1.2) +
+  # xlab("Longitude") + ylab("Latitude") + ggtitle("Eastern Highland Rim subset (gold) and study sites")
 
 # geom_map(data = data, map = map, aes(map_id = countries, fill = color)) 
 ```
 
-Sites had differing dominant vegetation types; click the points below for details. Also note that some sites were also in close proximity, making them difficult to see at broader zoom levels.
-```{r Leaflet map, echo=FALSE}
+```{r Leaflet map, echo=FALSE, fig.width = 8.5, fig.height = 5.5}
 leaflet(data=sitesizes)%>%
   setView(-85.87237, 35.78165, zoom=7)%>% 
   addTiles()%>%
-  addCircleMarkers(data = sitesizes, lat = ~Latitude, lng = ~Longitude,
+      addPolygons(outline_polya, 
+              lng = outline_polya@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polya@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polyb, 
+              lng = outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polyc, 
+              lng = outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polyd, 
+              lng = outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polye, 
+              lng = outline_polye@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polye@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polyf, 
+              lng = outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polyg, 
+              lng = outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polyh, 
+              lng = outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polyi, 
+              lng = outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polyj, 
+              lng = outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polyk, 
+              lng = outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addPolygons(outline_polyl, 
+              lng = outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,1], 
+              lat = outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,2],
+              color = "#DD8D29",
+              opacity= 9,
+              weight = 2) %>%
+      addCircleMarkers(data = sitesizes, lat = ~Latitude, lng = ~Longitude,
                    label = ~Site,
                    popup = ~Community,
-                   opacity= 5,
+                   opacity= 100,
                    weight = 2,
-                   color= "purple",
-                   radius = ~7)%>%
+                   color= "black",
+                   radius = ~4)%>%
   addProviderTiles(providers$Esri.NatGeoWorldMap, group = "NatGeo")%>%
   addProviderTiles(providers$Esri.WorldImagery, group = "ESRI") %>%
   addMiniMap(zoomLevelOffset = -4)%>%
@@ -224,6 +295,13 @@ leaflet(data=sitesizes)%>%
     baseGroups = c("NatGeo", "ESRI"),
     options = layersControlOptions(collapsed = FALSE))
 ```
+
+
+
+
+
+
+
 
 1031 1m^2 quadrats were sampled with differeing sample sizes per site based on the size of the site. 
 

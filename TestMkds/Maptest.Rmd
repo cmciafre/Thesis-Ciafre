@@ -10,9 +10,10 @@ pacman::p_load(ggplot2, dplyr, rgdal, leaflet)
 #Not sure why I keep this in
 knitr::opts_chunk$set(echo = TRUE)
 
+
 #Load data
-sppxsites<-read.csv("data/VEGDATADONE.csv", header=TRUE)
-sitesizes<-read.csv("data/SiteXsize2.csv", header=TRUE)
+sppxsites<-read.csv("Data/VEGDATADONE.csv", header=TRUE)
+sitesizes<-read.csv("Data/SiteXsize2.csv", header=TRUE)
 site_points <- select(sitesizes, c("Site", "Latitude", "Longitude"))
 #Note: there is no Site 15; it was ditched halfway through sampling because it was not independent from Site 14.
 ```
@@ -201,6 +202,11 @@ leaflet(data=sitesizes)%>%
     options = layersControlOptions(collapsed = FALSE))
 ```
 
+```{r}
+ph_basemap <- get_map(location=c(lon = -75.16522, lat = 39.95258), zoom=11, maptype = 'terrain-background', source = 'stamen')
+
+ggmap(ph_basemap)
+```
 
 
 
