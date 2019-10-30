@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<NetworkLink>
+	<name>Generate KML</name>
+	<visibility>0</visibility>
+	<LookAt>
+		<longitude>-96.63737572803858</longitude>
+		<latitude>38.30138631185955</latitude>
+		<altitude>0</altitude>
+		<heading>0</heading>
+		<tilt>0</tilt>
+		<range>1886485.019704345</range>
+	</LookAt>
+	<Link>
+		<href>https://geodata.epa.gov/arcgis/services/ORD/USEPA_Ecoregions_Level_III_and_IV/MapServer/KmlServer?Composite=false&amp;VectorsToRasters=true&amp;LayerIDs=0%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12&amp;</href>
+		<viewRefreshMode>onStop</viewRefreshMode>
+		<viewRefreshTime>2</viewRefreshTime>
+		<viewFormat>BBOX=[bboxWest],[bboxSouth],[bboxEast],[bboxNorth];CAMERA=[lookatLon],[lookatLat],[lookatRange],[lookatTilt],[lookatHeading];VIEW=[horizFov],[vertFov],[horizPixels],[vertPixels],[terrainEnabled]</viewFormat>
+	</Link>
+</NetworkLink>
+</kml>

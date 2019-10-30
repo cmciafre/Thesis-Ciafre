@@ -1,0 +1,222 @@
+---
+title: "Map Tests"
+output: html_notebook
+---
+
+```{r setup, NOTICE USE of PACMAN, include=FALSE}
+#install pacman first to automatically install and load any needed packages
+pacman::p_load(ggplot2, dplyr, rgdal, leaflet)
+
+#Not sure why I keep this in
+knitr::opts_chunk$set(echo = TRUE)
+
+#Load data
+sppxsites<-read.csv("data/VEGDATADONE.csv", header=TRUE)
+sitesizes<-read.csv("data/SiteXsize2.csv", header=TRUE)
+site_points <- select(sitesizes, c("Site", "Latitude", "Longitude"))
+#Note: there is no Site 15; it was ditched halfway through sampling because it was not independent from Site 14.
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+EHRa <- readOGR("MappyBits/a.kml")
+EHRb <- readOGR("MappyBits/b.kml")
+EHRc <- readOGR("MappyBits/c.kml")
+EHRd <- readOGR("MappyBits/d.kml")
+EHRe <- readOGR("MappyBits/e.kml")
+EHRf <- readOGR("MappyBits/f.kml")
+EHRg <- readOGR("MappyBits/g.kml")
+EHRh <- readOGR("MappyBits/h.kml")
+EHRi <- readOGR("MappyBits/i.kml")
+EHRj <- readOGR("MappyBits/j.kml")
+EHRk <- readOGR("MappyBits/k.kml")
+EHRl <- readOGR("MappyBits/l.kml")
+
+outline_pointsa <- EHRa@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsa) <- c("X","Y")
+outlinea <- Polygon(outline_pointsa)
+sp_outlinea <- Polygons(list(outlinea),1)
+outline_polya <- SpatialPolygons(list(sp_outlinea))
+proj4string(outline_polya) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointsb <- EHRb@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsb) <- c("X","Y")
+outlineb <- Polygon(outline_pointsb)
+sp_outlineb <- Polygons(list(outlineb),1)
+outline_polyb <- SpatialPolygons(list(sp_outlineb))
+proj4string(outline_polyb) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointsc <- EHRc@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsc) <- c("X","Y")
+outlinec <- Polygon(outline_pointsc)
+sp_outlinec <- Polygons(list(outlinec),1)
+outline_polyc <- SpatialPolygons(list(sp_outlinec))
+proj4string(outline_polyc) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointsd <- EHRd@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsd) <- c("X","Y")
+outlined <- Polygon(outline_pointsd)
+sp_outlined <- Polygons(list(outlined),1)
+outline_polyd <- SpatialPolygons(list(sp_outlined))
+proj4string(outline_polyd) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointse <- EHRe@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointse) <- c("X","Y")
+outlinee <- Polygon(outline_pointse)
+sp_outlinee <- Polygons(list(outlinee),1)
+outline_polye <- SpatialPolygons(list(sp_outlinee))
+proj4string(outline_polye) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointsf <- EHRf@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsf) <- c("X","Y")
+outlinef <- Polygon(outline_pointsf)
+sp_outlinef <- Polygons(list(outlinef),1)
+outline_polyf <- SpatialPolygons(list(sp_outlinef))
+proj4string(outline_polyf) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointsg <- EHRg@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsg) <- c("X","Y")
+outlineg <- Polygon(outline_pointsg)
+sp_outlineg <- Polygons(list(outlineg),1)
+outline_polyg <- SpatialPolygons(list(sp_outlineg))
+proj4string(outline_polyg) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointsh <- EHRh@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsh) <- c("X","Y")
+outlineh <- Polygon(outline_pointsh)
+sp_outlineh <- Polygons(list(outlineh),1)
+outline_polyh <- SpatialPolygons(list(sp_outlineh))
+proj4string(outline_polyh) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointsi <- EHRi@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsi) <- c("X","Y")
+outlinei <- Polygon(outline_pointsi)
+sp_outlinei <- Polygons(list(outlinei),1)
+outline_polyi <- SpatialPolygons(list(sp_outlinei))
+proj4string(outline_polyi) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointsj <- EHRj@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsj) <- c("X","Y")
+outlinej <- Polygon(outline_pointsj)
+sp_outlinej <- Polygons(list(outlinej),1)
+outline_polyj <- SpatialPolygons(list(sp_outlinej))
+proj4string(outline_polyj) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointsk <- EHRk@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsk) <- c("X","Y")
+outlinek <- Polygon(outline_pointsk)
+sp_outlinek <- Polygons(list(outlinek),1)
+outline_polyk <- SpatialPolygons(list(sp_outlinek))
+proj4string(outline_polyk) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+
+outline_pointsl <- EHRl@polygons[[1]]@Polygons[[1]]@coords
+colnames(outline_pointsl) <- c("X","Y")
+outlinel <- Polygon(outline_pointsl)
+sp_outlinel <- Polygons(list(outlinel),1)
+outline_polyl <- SpatialPolygons(list(sp_outlinel))
+proj4string(outline_polyl) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+```
+
+```{r}
+state <- map_data("state")
+county <- map_data("county")
+
+
+tn <- county %>% 
+  filter(region=="tennessee")
+ky <- county %>% 
+  filter(region=="kentucky")
+al <- county %>% 
+  filter(region=="alabama")
+
+
+ggplot() +  
+  geom_polygon(data = state, aes(x=long, y = lat, group = group),
+                        fill = "white", color="black") +
+  geom_polygon(data = tn, aes(x=long, y = lat, group = group),
+                        fill = "white", color="black") +
+  geom_polygon(data = ky, aes(x=long, y = lat, group = group),
+                        fill = "white", color="black") +
+  geom_polygon(data = al, aes(x=long, y = lat, group = group),
+                        fill = "white", color="black") +
+  geom_polygon(data=outline_polya, aes(x=outline_polya@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polya@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polyb, aes(x=outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polyc, aes(x=outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polyd, aes(x=outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polye, aes(x=outline_polye@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polye@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polyf, aes(x=outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polyg, aes(x=outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polyh, aes(x=outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polyi, aes(x=outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polyj, aes(x=outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polyk, aes(x=outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_polygon(data=outline_polyl, aes(x=outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                      y=outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,2]),
+               alpha = .8, fill="orange") +
+  geom_point(data = site_points, aes(x=Longitude,y=Latitude), color="black") +
+  coord_fixed(xlim = c(-90.5, -82),  ylim = c(34.5, 37.6), ratio = 1.2) +
+  xlab("Longitude") + ylab("Latitude") + ggtitle("Eastern Highland Rim subset (gold) and study sites")
+
+# geom_map(data = data, map = map, aes(map_id = countries, fill = color)) 
+```
+
+```{r}
+leaflet(data=sitesizes)%>%
+  setView(-85.87237, 35.78165, zoom=7)%>% 
+  addTiles()%>%
+  addCircleMarkers(data = sitesizes, lat = ~Latitude, lng = ~Longitude,
+                   label = ~Site,
+                   popup = ~Community,
+                   opacity= 5,
+                   weight = 2,
+                   color= "purple",
+                   radius = ~7)%>%
+  addProviderTiles(providers$Esri.NatGeoWorldMap, group = "NatGeo")%>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "ESRI") %>%
+  addMiniMap(zoomLevelOffset = -4)%>%
+  addScaleBar()%>%
+  addLayersControl(
+    baseGroups = c("NatGeo", "ESRI"),
+    options = layersControlOptions(collapsed = FALSE))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
