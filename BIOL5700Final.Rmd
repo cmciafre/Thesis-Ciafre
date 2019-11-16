@@ -2,140 +2,135 @@
 title: "Deterministic processes drive wetland plant community composition and diversity"
 author: "C. M. Ciafre"
 output:
-  html_document:
-    df_print: paged
   html_notebook:
     df_print: paged
     highlight: zenburn
     number_sections: no
     rows.print: 10
     theme: journal
+  html_document:
+    df_print: paged
 ---
 #   {.tabset .tabset-fade}
 ```{r setup, NOTICE USE of PACMAN, include=FALSE}
 #install pacman first to automatically install and load any needed packages
-pacman::p_load(ggplot2, dplyr, tidyr, reshape, iNEXT, knitr, kableExtra, ggfortify, ggpubr, vegan, geosphere, mclust, rgdal, leaflet, ggmap)
+pacman::p_load(ggplot2, dplyr, tidyr, reshape, iNEXT, knitr, kableExtra, ggfortify, ggpubr, vegan, geosphere, mclust, rgdal, leaflet, ggmap, colordistance, MuMIn, lme4, beepr)
 
 #Not sure why I keep this in
 knitr::opts_chunk$set(echo = TRUE)
 
 #Load data
-sppxsites<-read.csv("data/VEGDATADONE.csv", header=TRUE)
+sppxsites<-read.csv("data/VEGDATADONECORR.csv", header=TRUE)
 sitenames<-read.csv("data/SiteNames.csv", header=TRUE)
 sitesizes<-read.csv("data/SiteXsize2.csv", header=TRUE)
 quaddatas<-read.csv("data/quadmetrics.csv", header=TRUE)
+quaddepcan<-read.csv("data/quaddepcan.csv", header=TRUE)
 colnames(quaddatas)[colnames(quaddatas)=="Depth..m."] <- "Depth"
 colnames(quaddatas)[colnames(quaddatas)=="X..Canopy"] <- "Canopy"
 colnames(quaddatas)[colnames(quaddatas)=="Pond"] <- "Site"
 site_points <- select(sitesizes, c("Site", "Latitude", "Longitude"))
 #Note: there is no Site 15; it was ditched halfway through sampling because it was not independent from Site 14.
+
 ```
 
-## Background 
 
-<figure>
-<img src="Images/QuadratCropped.jpg"></figure><br>
-
-### Data Collection
-
-Plots were sampled at 27 independent sites throughout a subset of the Eastern Highland Rim ecoregion (delineated in tan below). Note that some sites were also in close proximity, making them difficult to see at broader zoom levels.
 ```{r Static map prep, message=FALSE, warning=FALSE, include=FALSE}
-EHRa <- readOGR("MappyBits/a.kml")
-EHRb <- readOGR("MappyBits/b.kml")
-EHRc <- readOGR("MappyBits/c.kml")
-EHRd <- readOGR("MappyBits/d.kml")
-EHRe <- readOGR("MappyBits/e.kml")
-EHRf <- readOGR("MappyBits/f.kml")
-EHRg <- readOGR("MappyBits/g.kml")
-EHRh <- readOGR("MappyBits/h.kml")
-EHRi <- readOGR("MappyBits/i.kml")
-EHRj <- readOGR("MappyBits/j.kml")
-EHRk <- readOGR("MappyBits/k.kml")
-EHRl <- readOGR("MappyBits/l.kml")
-
-outline_pointsa <- EHRa@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsa) <- c("X","Y")
-outlinea <- Polygon(outline_pointsa)
-sp_outlinea <- Polygons(list(outlinea),1)
-outline_polya <- SpatialPolygons(list(sp_outlinea))
-proj4string(outline_polya) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointsb <- EHRb@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsb) <- c("X","Y")
-outlineb <- Polygon(outline_pointsb)
-sp_outlineb <- Polygons(list(outlineb),1)
-outline_polyb <- SpatialPolygons(list(sp_outlineb))
-proj4string(outline_polyb) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointsc <- EHRc@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsc) <- c("X","Y")
-outlinec <- Polygon(outline_pointsc)
-sp_outlinec <- Polygons(list(outlinec),1)
-outline_polyc <- SpatialPolygons(list(sp_outlinec))
-proj4string(outline_polyc) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointsd <- EHRd@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsd) <- c("X","Y")
-outlined <- Polygon(outline_pointsd)
-sp_outlined <- Polygons(list(outlined),1)
-outline_polyd <- SpatialPolygons(list(sp_outlined))
-proj4string(outline_polyd) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointse <- EHRe@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointse) <- c("X","Y")
-outlinee <- Polygon(outline_pointse)
-sp_outlinee <- Polygons(list(outlinee),1)
-outline_polye <- SpatialPolygons(list(sp_outlinee))
-proj4string(outline_polye) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointsf <- EHRf@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsf) <- c("X","Y")
-outlinef <- Polygon(outline_pointsf)
-sp_outlinef <- Polygons(list(outlinef),1)
-outline_polyf <- SpatialPolygons(list(sp_outlinef))
-proj4string(outline_polyf) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointsg <- EHRg@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsg) <- c("X","Y")
-outlineg <- Polygon(outline_pointsg)
-sp_outlineg <- Polygons(list(outlineg),1)
-outline_polyg <- SpatialPolygons(list(sp_outlineg))
-proj4string(outline_polyg) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointsh <- EHRh@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsh) <- c("X","Y")
-outlineh <- Polygon(outline_pointsh)
-sp_outlineh <- Polygons(list(outlineh),1)
-outline_polyh <- SpatialPolygons(list(sp_outlineh))
-proj4string(outline_polyh) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointsi <- EHRi@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsi) <- c("X","Y")
-outlinei <- Polygon(outline_pointsi)
-sp_outlinei <- Polygons(list(outlinei),1)
-outline_polyi <- SpatialPolygons(list(sp_outlinei))
-proj4string(outline_polyi) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointsj <- EHRj@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsj) <- c("X","Y")
-outlinej <- Polygon(outline_pointsj)
-sp_outlinej <- Polygons(list(outlinej),1)
-outline_polyj <- SpatialPolygons(list(sp_outlinej))
-proj4string(outline_polyj) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointsk <- EHRk@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsk) <- c("X","Y")
-outlinek <- Polygon(outline_pointsk)
-sp_outlinek <- Polygons(list(outlinek),1)
-outline_polyk <- SpatialPolygons(list(sp_outlinek))
-proj4string(outline_polyk) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
-
-outline_pointsl <- EHRl@polygons[[1]]@Polygons[[1]]@coords
-colnames(outline_pointsl) <- c("X","Y")
-outlinel <- Polygon(outline_pointsl)
-sp_outlinel <- Polygons(list(outlinel),1)
-outline_polyl <- SpatialPolygons(list(sp_outlinel))
-proj4string(outline_polyl) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# EHRa <- readOGR("MappyBits/a.kml")
+# EHRb <- readOGR("MappyBits/b.kml")
+# EHRc <- readOGR("MappyBits/c.kml")
+# EHRd <- readOGR("MappyBits/d.kml")
+# EHRe <- readOGR("MappyBits/e.kml")
+# EHRf <- readOGR("MappyBits/f.kml")
+# EHRg <- readOGR("MappyBits/g.kml")
+# EHRh <- readOGR("MappyBits/h.kml")
+# EHRi <- readOGR("MappyBits/i.kml")
+# EHRj <- readOGR("MappyBits/j.kml")
+# EHRk <- readOGR("MappyBits/k.kml")
+# EHRl <- readOGR("MappyBits/l.kml")
+# 
+# outline_pointsa <- EHRa@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsa) <- c("X","Y")
+# outlinea <- Polygon(outline_pointsa)
+# sp_outlinea <- Polygons(list(outlinea),1)
+# outline_polya <- SpatialPolygons(list(sp_outlinea))
+# proj4string(outline_polya) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointsb <- EHRb@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsb) <- c("X","Y")
+# outlineb <- Polygon(outline_pointsb)
+# sp_outlineb <- Polygons(list(outlineb),1)
+# outline_polyb <- SpatialPolygons(list(sp_outlineb))
+# proj4string(outline_polyb) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointsc <- EHRc@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsc) <- c("X","Y")
+# outlinec <- Polygon(outline_pointsc)
+# sp_outlinec <- Polygons(list(outlinec),1)
+# outline_polyc <- SpatialPolygons(list(sp_outlinec))
+# proj4string(outline_polyc) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointsd <- EHRd@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsd) <- c("X","Y")
+# outlined <- Polygon(outline_pointsd)
+# sp_outlined <- Polygons(list(outlined),1)
+# outline_polyd <- SpatialPolygons(list(sp_outlined))
+# proj4string(outline_polyd) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointse <- EHRe@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointse) <- c("X","Y")
+# outlinee <- Polygon(outline_pointse)
+# sp_outlinee <- Polygons(list(outlinee),1)
+# outline_polye <- SpatialPolygons(list(sp_outlinee))
+# proj4string(outline_polye) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointsf <- EHRf@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsf) <- c("X","Y")
+# outlinef <- Polygon(outline_pointsf)
+# sp_outlinef <- Polygons(list(outlinef),1)
+# outline_polyf <- SpatialPolygons(list(sp_outlinef))
+# proj4string(outline_polyf) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointsg <- EHRg@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsg) <- c("X","Y")
+# outlineg <- Polygon(outline_pointsg)
+# sp_outlineg <- Polygons(list(outlineg),1)
+# outline_polyg <- SpatialPolygons(list(sp_outlineg))
+# proj4string(outline_polyg) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointsh <- EHRh@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsh) <- c("X","Y")
+# outlineh <- Polygon(outline_pointsh)
+# sp_outlineh <- Polygons(list(outlineh),1)
+# outline_polyh <- SpatialPolygons(list(sp_outlineh))
+# proj4string(outline_polyh) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointsi <- EHRi@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsi) <- c("X","Y")
+# outlinei <- Polygon(outline_pointsi)
+# sp_outlinei <- Polygons(list(outlinei),1)
+# outline_polyi <- SpatialPolygons(list(sp_outlinei))
+# proj4string(outline_polyi) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointsj <- EHRj@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsj) <- c("X","Y")
+# outlinej <- Polygon(outline_pointsj)
+# sp_outlinej <- Polygons(list(outlinej),1)
+# outline_polyj <- SpatialPolygons(list(sp_outlinej))
+# proj4string(outline_polyj) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointsk <- EHRk@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsk) <- c("X","Y")
+# outlinek <- Polygon(outline_pointsk)
+# sp_outlinek <- Polygons(list(outlinek),1)
+# outline_polyk <- SpatialPolygons(list(sp_outlinek))
+# proj4string(outline_polyk) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
+# 
+# outline_pointsl <- EHRl@polygons[[1]]@Polygons[[1]]@coords
+# colnames(outline_pointsl) <- c("X","Y")
+# outlinel <- Polygon(outline_pointsl)
+# sp_outlinel <- Polygons(list(outlinel),1)
+# outline_polyl <- SpatialPolygons(list(sp_outlinel))
+# proj4string(outline_polyl) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
 ```
 
 
@@ -204,111 +199,6 @@ proj4string(outline_polyl) <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84")
 # geom_map(data = data, map = map, aes(map_id = countries, fill = color)) 
 ```
 
-```{r Leaflet map, echo=FALSE, fig.width = 8.5, fig.height = 5.5}
-leaflet(data=sitesizes)%>%
-  setView(-85.87237, 35.78165, zoom=7)%>% 
-  addTiles()%>%
-      addPolygons(outline_polya, 
-              lng = outline_polya@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polya@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polyb, 
-              lng = outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polyc, 
-              lng = outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polyd, 
-              lng = outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polye, 
-              lng = outline_polye@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polye@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polyf, 
-              lng = outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polyg, 
-              lng = outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polyh, 
-              lng = outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polyi, 
-              lng = outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polyj, 
-              lng = outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polyk, 
-              lng = outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addPolygons(outline_polyl, 
-              lng = outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,1], 
-              lat = outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,2],
-              color = "#DD8D29",
-              opacity= 9,
-              weight = 2) %>%
-      addCircleMarkers(data = sitesizes, lat = ~Latitude, lng = ~Longitude,
-                   label = ~Site,
-                   popup = ~Community,
-                   opacity= 100,
-                   weight = 2,
-                   color= "black",
-                   radius = ~4)%>%
-  addProviderTiles(providers$Esri.NatGeoWorldMap, group = "NatGeo")%>%
-  addProviderTiles(providers$Esri.WorldImagery, group = "ESRI") %>%
-  addMiniMap(zoomLevelOffset = -4)%>%
-  addScaleBar()%>%
-  addLayersControl(
-    baseGroups = c("NatGeo", "ESRI"),
-    options = layersControlOptions(collapsed = FALSE))
-```
-
-
-
-
-
-
-
-
-1031 1m^2 quadrats were sampled with differeing sample sizes per site based on the size of the site. 
-
-### Data Configuration
-
-Nearly all statistical packages require the data to be in a presence-absence form. There are several ways to do it (one of which can maintain cover values rather than changing it to binary data); I used a loop function. The result is a presence-absence matrix with Site as a column so subsamples can be organized accordingly. 
-
 ```{r Loop magic, cache=TRUE, include=FALSE}
 sites_sub<-unique(sppxsites$ID)
 spp_sub<-unique(sppxsites$Species)
@@ -327,20 +217,14 @@ colnames(spp_commat) <- as.character(spp_sub)
 spp_commat.df<- as.data.frame(spp_commat)
 
 #Make empty quadrats truly empty
-spp_commat.df.fixed<-subset(spp_commat.df, select=-c(Empty))
+spp_commat.df.fixed<-subset(spp_commat.df, select=-c(EMPTY))
 
 #Add site column back in and change its name
 AllPonds <- cbind(sitenames$Pond,spp_commat.df.fixed)
 names(AllPonds)[names(AllPonds)=="sitenames$Pond"] <- "Site"
+
+beep(sound = 1, expr = NULL)
 ```
-
-```{r Kable 1, echo=FALSE}
-AllPondsTrimmed<-select(AllPonds, c(1:7))
-kable(AllPondsTrimmed[1:5, ], format = "pandoc", full_width=F, caption = 'Table 1. Sample of data in presence-absence format.')
-```
-
-
-## Diversity
 
 ```{r Split sites, include=FALSE}
 #Break up AllPonds into dataframes by site
@@ -384,7 +268,8 @@ site.list.freq.all = lapply(site.list.all, as.incfreq)
 ```
 
 ```{r Unicorn vomit prep2, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, cache=TRUE, include=FALSE}
-out.inc.all<-iNEXT(site.list.freq.all, q=0, datatype="incidence_freq", nboot=10000)
+out.inc.all<-iNEXT(site.list.freq.all, q=0, datatype="incidence_freq", nboot=1000)
+beep(sound = 1, expr = NULL)
 ```
 
 ```{r Kable 2, include=FALSE}
@@ -412,6 +297,7 @@ RichDivFinal<-cbind(RichDivObs.1, RichDivEst.2)
 
 #Reorder columns so they make sense
 RichDivTab<-RichDivFinal[,c(1,2,5,3,6,4,7)]
+RichDivTab$Dominance<-1/(RichDivTab$SimpsonObs)
 RichDivKab<-RichDivTab[c(1, 6, 7, 8, 10, 26, 27),]
 
 kable(RichDivKab[1:7,], format = "pandoc", full_width=F, caption = 'Table 2. Observed and expected Hill numbers from a portion of the sites.')
@@ -425,33 +311,7 @@ colnames(RichnessOnly)[colnames(RichnessOnly)=="Estimator"] <- "Estimated"
 RichGath<-gather(RichnessOnly,Richness,value,Observed:Estimated)
 RichSize<- cbind(RichGath, sitesizes$Quadrats)
 colnames(RichSize)[colnames(RichSize)=="sitesizes$Quadrats"] <- "Quadrats"
-
-
-ggplot(RichGath, aes(x=Site, y=value, color=Richness)) +
-  scale_color_manual(values=c("darkgrey", "black"))+
-  geom_errorbar(aes(ymin=RichLCL, ymax=RichUCL), width=.3, color="darkgrey") +
-  geom_point(size=2)+
-  ylab("Species Richness")+
-  coord_cartesian(ylim = c(0, 250))+
-  ggtitle("Estimated and observed species richness by site, with 95% confidence intervals.")+
-  labs(caption="Note that upper confidence interval for Site 26 extends to 262.8 and Site 10 extends to 408.52.")+
-  theme(axis.title=element_text(size=14), plot.title = element_text(size=14))
 ```
-
-Sites had widely varying observed total richness. The use of extrapolated species accumulation curves can tell us how many species are likely to be at the site based on how many were found in accumulating subsamples. However if a curve never flattens, it gives a wild estimate of richness (see Site 10).
-
-What do the curves that made these estimates look like? Let's take a look!
-
-```{r Unicorn vomit, echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, cache=TRUE}
-ggiNEXT(out.inc.all, type=1, color.var="site") + 
-  theme_bw(base_size = 18) +
-  ylab("Species Richness") +
-  xlab("Number of Quadrats") +
-  ggtitle("Interpolated and extrapolated richness") +
-  labs(caption="B=10000.")
-```
-
-This plot is not particularly helpful other than to visualize the general span of observed and expected richnesses and sampling efforts. Examining the curves in portions of 3-4 is necessary to 
 
 ```{r Smaller curves 1, include=FALSE}
 #List the dataframes, then convert them into incidence frequencies
@@ -480,7 +340,436 @@ site.list.7 = list(S04=S04, S07=S07, S18=S18, S24=S24)
 site.list.freq.7 = lapply(site.list.7, as.incfreq)
 ```
 
-```{r Smaller curves 2, echo=FALSE, fig.height=4, fig.width=7, message=FALSE, warning=FALSE, cache=TRUE}
+
+ 
+```{r Data rearranging, echo=FALSE, fig.height=4, fig.width=10, message=FALSE, warning=FALSE}
+Intervals<-select(slice(RichGath, c(28:54)), c(RichLCL, RichUCL))
+RichInts<-cbind(RichDivTab, Intervals)
+RichInts$PercComplete <- RichInts$RichnessObs/RichInts$RichnessExp*100
+RichInts$PercCompleteU<- RichInts$RichnessObs/RichInts$RichUCL*100
+RichInts$PercCompleteL<- RichInts$RichnessObs/RichInts$RichLCL*100
+sitesizes$QuadsArea<- sitesizes$Quadrats/(pi*(sitesizes$Length^2))
+sitesizes$Area<-(pi*(sitesizes$Length^2))
+# 
+# THIS PLOT IS TRASH
+# ggplot(RichInts, aes(x=Site, y=PercComplete)) +
+#   geom_bar(aes(y=sitesizes$Quadrats,x=Site), stat="identity", width = 0.75, fill="lightgrey")+
+#   geom_point(size=2)+
+#   geom_errorbar(aes(ymin=PercCompleteL, ymax=PercCompleteU), width=.3) +
+#   ylab("Observed/Expected Richness * 100")+
+#   scale_y_continuous(sec.axis = sec_axis(~., name = "Quadrats Sampled"))+
+#   ggtitle("Completion percentage and sample size per site")+
+#   theme(axis.title=element_text(size=14), plot.title = element_text(size=14))
+```
+
+```{r LM Sampling sufficiency, include=FALSE}
+lmRichQuad <- lm(RichInts$PercComplete ~ sitesizes$QuadsArea)
+autoplot(lmRichQuad)
+aRichQuad<-anova(lmRichQuad)
+aRichQuad
+```
+
+```{r Site size and richness, echo=FALSE, message=FALSE, warning=FALSE}
+quaddies<-merge(sitesizes, RichInts, by="Site")
+quaddies$Latitude <- as.numeric(as.character(quaddies$Latitude))
+```
+
+```{r Sorensen time, include=FALSE}
+sum01<-rowSums(S01)
+sum02<-rowSums(S02)
+sum03<-rowSums(S03)
+sum04<-rowSums(S04)
+sum05<-rowSums(S05)
+sum06<-rowSums(S06)
+sum07<-rowSums(S07)
+sum08<-rowSums(S08)
+sum09<-rowSums(S09)
+sum10<-rowSums(S10)
+sum11<-rowSums(S11)
+sum12<-rowSums(S12)
+sum13<-rowSums(S13)
+sum14<-rowSums(S14)
+sum16<-rowSums(S16)
+sum17<-rowSums(S17)
+sum18<-rowSums(S18)
+sum19<-rowSums(S19)
+sum20<-rowSums(S20)
+sum21<-rowSums(S21)
+sum22<-rowSums(S22)
+sum23<-rowSums(S23)
+sum24<-rowSums(S24)
+sum25<-rowSums(S25)
+sum26<-rowSums(S26)
+sum27<-rowSums(S27)
+sum28<-rowSums(S28)
+
+summary<-as.data.frame(rbind(sum01, sum02, sum03, sum04, sum05, sum06, sum07, sum08, sum09, sum10, sum11, sum12, sum13, sum14, sum16, sum17, sum18, sum19, sum20, sum21, sum22, sum23, sum24, sum25, sum26, sum27, sum28))
+sums<-colSums(summary)
+#TO DELETE SINGLETONS
+sumsums<-rbind(sums, summary)
+rownames(sumsums)[1]<-"sum"
+sumsums1 = sumsums[,sums > 1]
+ncol(sumsums[,sums == 1])
+#104 singletons!
+ncol(sumsums[,sums == 2])
+#42 doubletons!
+
+#Singletons AND doubletons for this bad boy
+sumsums[sumsums > 0] <- 1
+sumsums3<-slice(sumsums, -c(1))
+
+#Convert to binary
+sumsums1[sumsums1 > 0] <- 1
+
+sumsums2<-slice(sumsums1, -c(1))
+
+#0=identical, 1=the most dissimilar
+sorensen<-vegdist(sumsums2, method="bray", binary=TRUE, diag=TRUE, upper=FALSE, na.rm = FALSE)
+sorensen.m<-as.matrix(sorensen)
+sorensen.m.t<-signif(sorensen.m, digits = 3)
+```
+
+```{r Distance Matrix, include=FALSE}
+sitesizesgeo<-select(sitesizes, c("Site", "Latitude", "Longitude"))
+sitesizesgeo.1<-sitesizesgeo[,c(1,3,2)]
+sitesizesgeo.2<-sitesizesgeo.1[,c(2,3)]
+distance.m<-distm(sitesizesgeo.2)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#This is really sloppy
+sorensencol<-as.data.frame(sorensen.m.t)
+distancecol<-as.data.frame(distance.m)
+sorensenmelt<-melt(sorensencol, variable.name = 'Sorensen')
+geographicmelt<-melt(distancecol, variable.name = 'Geographic')
+distance.1<-cbind(geographicmelt, sorensenmelt)
+names(distance.1)<-c("Var1", "geographic", "Var2", "Sorensen")
+#Remove zero's because they occur whwere sites match
+distance.f<-filter(distance.1, geographic > 0)
+```
+
+```{r NMDS prep, include=FALSE}
+# sorensen.nmds01 <- metaMDS(sorensen, k=10)
+# sorstressplot<-stressplot(sorensen.nmds01)
+# 
+# beep(sound = 1, expr = NULL)
+```
+
+```{r Death to singletons}
+AllPondsNoSite<-select(AllPonds, -1)
+AllSums<-colSums(AllPondsNoSite)
+AllData<-rbind(AllPondsNoSite, AllSums)
+rownames(AllData)[rownames(AllData)=="1032"] <- "sum"
+#Remove doublteons
+AllDataSums = AllData[,AllSums > 1]
+ncol(AllData[,sums <3])
+#235** singletons!
+#152 singltons and doubletons!
+
+AllDataNoSing<-slice(AllDataSums, -c(1032))
+AllDataNoSing$sum<-rowSums(AllDataNoSing)
+AllDataNoSingZero<-filter(AllDataNoSing, sum > 0)
+```
+
+```{r Sorensen vegdist, include=FALSE}
+sorensen02<-vegdist(AllDataNoSingZero, method="bray", binary=TRUE, diag=TRUE, upper=FALSE, na.rm = FALSE)
+
+sorensen.nmds02 <- metaMDS(sorensen02, k=10)
+sorstressplot02<-stressplot(sorensen.nmds02)
+beep(sound = 1, expr = NULL)
+```
+
+```{r For the PerMANOVA}
+sumsumsPerm<-cbind(sumsums2, sitesizes$Permanence)
+colnames(sumsumsPerm)[colnames(sumsumsPerm)=="sitesizes$Permanence"] <- "Permanence"
+```
+
+```{r}
+AllRSums<-as.data.frame(rowSums(AllPondsNoSite))
+names(AllRSums)<-c("Sum")
+sppxsites.T<-select(sppxsites, c(1, 12, 15, 16))
+names(sppxsites.T)<-c("Site", "ID", "Depth", "Canopy")
+AllSimp<-aggregate(sppxsites.T[3:4], sppxsites.T[1:2], compress)
+quadvarssums<-cbind(AllSimp, AllRSums)
+```
+
+```{r}
+sumsumssite<-cbind(sumsums3, sitesizes$Site)
+colnames(sumsumssite)[colnames(sumsumssite)=="sitesizes$Site"] <- "Site"
+sumsiteraup<-subset(sumsumssite, select=c(313,1:312))
+```
+
+```{r}
+raup_crick=function(spXsite, plot_names_in_col1=TRUE, classic_metric=FALSE, split_ties=TRUE, reps=9999, set_all_species_equal=FALSE, as.distance.matrix=TRUE, report_similarity=FALSE){
+	##expects a species by site matrix for spXsite, with row names for plots, or optionally plots named in column 1.  By default calculates a modification of the Raup-Crick metric (standardizing the metric to range from -1 to 1 instead of 0 to 1). Specifying classic_metric=TRUE instead calculates the original Raup-Crick metric that ranges from 0 to 1. The option split_ties (defaults to TRUE) adds half of the number of null observations that are equal to the observed number of shared species to the calculation- this is highly recommended.  The argument report_similarity defaults to FALSE so the function reports a dissimilarity (which is appropriate as a measure of beta diversity).  Setting report_similarity=TRUE returns a measure of similarity, as Raup and Crick originally specified.  If ties are split (as we recommend) the dissimilarity (default) and similarity (set report_similarity=TRUE) calculations can be flipped by multiplying by -1 (for our modification, which ranges from -1 to 1) or by subtracting the metric from 1 (for the classic metric which ranges from 0 to 1). If ties are not split (and there are ties between the observed and expected shared number of species) this conversion will not work. The argument reps specifies the number of randomizations (a minimum of 999 is recommended- default is 9999).  set_all_species_equal weights all species equally in the null model instead of weighting species by frequency of occupancy.  
+	##Note that the choice of how many plots (rows) to include has a real impact on the metric, as species and their occurrence frequencies across the set of plots is used to determine gamma and the frequency with which each species is drawn from the null model	
+	##this section moves plot names in column 1 (if specified as being present) into the row names of the matrix and drops the column of names
+	if(plot_names_in_col1){
+		row.names(spXsite)<-spXsite[,1]
+		spXsite<-spXsite[,-1]
+		}
+	## count number of sites and total species richness across all plots (gamma)
+	n_sites<-nrow(spXsite)
+	gamma<-ncol(spXsite)
+	##make the spXsite matrix into a pres/abs. (overwrites initial spXsite matrix):
+	ceiling(spXsite/max(spXsite))->spXsite
+	##create an occurrence vector- used to give more weight to widely distributed species in the null model:
+	occur<-apply(spXsite, MARGIN=2, FUN=sum)
+	##NOT recommended- this is a non-trivial change to the metric:
+	##sets all species to occur with equal frequency in the null model
+	##e.g.- discards any occupancy frequency information
+	if(set_all_species_equal){
+		occur<-rep(1,gamma)
+		}
+	## determine how many unique species richness values are in the dataset
+	##this is used to limit the number of null communities that have to be calculated
+	alpha_levels<-sort(unique(apply(spXsite, MARGIN=1, FUN=sum)))
+	##make_null:
+	##alpha_table is used as a lookup to help identify which null distribution to use for the tests later.  It contains one row for each combination of alpha richness levels. 
+	alpha_table<-data.frame(c(NA), c(NA))
+	names(alpha_table)<-c("smaller_alpha", "bigger_alpha")
+	col_count<-1
+	##null_array will hold the actual null distribution values.  Each element of the array corresponds to a null distribution for each combination of alpha values.  The alpha_table is used to point to the correct null distribution- the row numbers of alpha_table correspond to the [[x]] indices of the null_array.  Later the function will find the row of alpha_table with the right combination of alpha values.  That row number is used to identify the element of null_array that contains the correct null distribution for that combination of alpha levels. 
+	null_array<-list()
+	##looping over each combination of alpha levels:
+	for(a1 in 1:length(alpha_levels)){
+		for(a2 in a1:length(alpha_levels)){
+			##build a null distribution of the number of shared species for a pair of alpha values:
+			null_shared_spp<-NULL
+			for(i in 1:reps){
+				##two empty null communities of size gamma:
+				com1<-rep(0,gamma)
+				com2<-rep(0,gamma)
+				##add alpha1 number of species to com1, weighting by species occurrence frequencies:
+				com1[sample(1:gamma, alpha_levels[a1], replace=FALSE, prob=occur)]<-1
+				##same for com2:
+				com2[sample(1:gamma, alpha_levels[a2], replace=FALSE, prob=occur)]<-1
+				##how many species are shared in common?
+				null_shared_spp[i]<-sum((com1+com2)>1)
+				}
+			##store null distribution, record values for alpha 1 and 2 in the alpha_table to help find the correct null distribution later:
+			null_array[[col_count]]<-null_shared_spp
+			alpha_table[col_count, which(names(alpha_table)=="smaller_alpha")]<-alpha_levels[a1]
+			alpha_table[col_count, which(names(alpha_table)=="bigger_alpha")]<-alpha_levels[a2]
+			#increment the counter for the columns of the alpha table/ elements of the null array
+			col_count<-col_count+1
+			}
+		}
+	##create a new column with both alpha levels to match on:
+	alpha_table$matching<-paste(alpha_table[,1], alpha_table[,2], sep="_")
+	
+	#####################
+	##do the test:
+	##build a site by site matrix for the results, with the names of the sites in the row and col names:
+	results<-matrix(data=NA, nrow=n_sites, ncol=n_sites, dimnames=list(row.names(spXsite), row.names(spXsite)))
+	##for each pair of sites (duplicates effort now to make a full matrix instead of a half one- but this part should be minimal time as compared to the null model building)
+	for(i in 1:n_sites){
+		for(j in 1:n_sites){
+			##how many species are shared between the two sites:
+			n_shared_obs<-sum((spXsite[i,]+spXsite[j,])>1)
+			## what was the observed richness of each site?
+			obs_a1<-sum(spXsite[i,])
+			obs_a2<-sum(spXsite[j,])
+			##place these alphas into an object to match against alpha_table (sort so smaller alpha is first)
+			obs_a_pair<-sort(c(obs_a1, obs_a2))
+			##match against the alpha table- row index identifies which element of the null array contains the correct null distribution for the observed combination of alpha values:
+			null_index<-which(alpha_table$matching==paste(obs_a_pair[1], obs_a_pair[2], sep="_"))
+			##how many null observations is the observed value tied with?
+			num_exact_matching_in_null<-sum(null_array[[null_index]]==n_shared_obs)
+			##how many null values are bigger than the observed value?
+			num_greater_in_null<-sum(null_array[[null_index]]>n_shared_obs)
+			rc<-(num_greater_in_null)/reps
+			if(split_ties){
+				rc<-((num_greater_in_null+(num_exact_matching_in_null)/2)/reps)
+			}
+			if(!classic_metric){	
+					##our modification of raup crick standardizes the metric to range from -1 to 1 instead of 0 to 1
+					rc<-(rc-.5)*2
+			}
+			## at this point rc represents an index of dissimilarity- multiply by -1 to convert to a similarity as specified in the original 1979 Raup Crick paper
+			if(report_similarity & !classic_metric){
+				rc<- rc*-1
+				}
+			## the switch to similarity is done differently if the original 0 to 1 range of the metric is used:
+			if(report_similarity & classic_metric){
+				rc<- 1-rc
+				}
+			##store the metric in the results matrix:
+			results[i,j]<-round(rc, digits=2)
+			}
+		}
+if(as.distance.matrix){
+	results<-as.dist(results)
+	}	
+return(results)
+	}
+```
+
+```{r}
+raupy<-raup_crick(sumsiteraup, plot_names_in_col1=TRUE, classic_metric=FALSE, split_ties=TRUE, reps=9999, set_all_species_equal=FALSE, as.distance.matrix=TRUE, report_similarity=FALSE)
+beep(sound = 1, expr = NULL)
+```
+
+
+
+
+## Background 
+
+<figure>
+<img src="Images/QuadratCropped.jpg"></figure><br>
+
+### Data Collection
+
+Plots were sampled at 27 independent sites throughout a subset of the Eastern Highland Rim ecoregion (delineated in tan below). Note that some sites were also in close proximity, making them difficult to see 
+
+```{r Leaflet map, echo=FALSE, fig.width = 8.5, fig.height = 5.5}
+# leaflet(data=sitesizes)%>%
+#   setView(-85.87237, 35.78165, zoom=7)%>% 
+#   addTiles()%>%
+#       addPolygons(outline_polya, 
+#               lng = outline_polya@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polya@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polyb, 
+#               lng = outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polyb@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polyc, 
+#               lng = outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polyc@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polyd, 
+#               lng = outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polyd@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polye, 
+#               lng = outline_polye@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polye@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polyf, 
+#               lng = outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polyf@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polyg, 
+#               lng = outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polyg@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polyh, 
+#               lng = outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polyh@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polyi, 
+#               lng = outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polyi@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polyj, 
+#               lng = outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polyj@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polyk, 
+#               lng = outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polyk@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addPolygons(outline_polyl, 
+#               lng = outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,1], 
+#               lat = outline_polyl@polygons[[1]]@Polygons[[1]]@coords[,2],
+#               color = "#DD8D29",
+#               opacity= 9,
+#               weight = 2) %>%
+#       addCircleMarkers(data = sitesizes, lat = ~Latitude, lng = ~Longitude,
+#                    label = ~Site,
+#                    popup = ~Community,
+#                    opacity= 100,
+#                    weight = 2,
+#                    color= "black",
+#                    radius = ~4)%>%
+#   addProviderTiles(providers$Esri.NatGeoWorldMap, group = "NatGeo")%>%
+#   addProviderTiles(providers$Esri.WorldImagery, group = "ESRI") %>%
+#   addMiniMap(zoomLevelOffset = -4)%>%
+#   addScaleBar()%>%
+#   addLayersControl(
+#     baseGroups = c("NatGeo", "ESRI"),
+#     options = layersControlOptions(collapsed = FALSE))
+```
+
+
+
+
+
+
+
+
+1031 1m^2 quadrats were sampled with differeing sample sizes per site based on the size of the site. 
+
+### Data Configuration
+
+Nearly all statistical packages require the data to be in a presence-absence form. There are several ways to do it (one of which can maintain cover values rather than changing it to binary data); I used a loop function. The result is a presence-absence matrix with Site as a column so subsamples can be organized accordingly. 
+
+
+
+```{r Kable 1, echo=FALSE}
+AllPondsTrimmed<-select(AllPonds, c(1:7))
+kable(AllPondsTrimmed[1:5, ], format = "pandoc", full_width=F, caption = 'Table 1. Sample of data in presence-absence format.')
+```
+
+
+## Diversity
+
+
+
+
+```{r Est and Obs Richness Plot, echo=FALSE, fig.height=4, fig.width=10, message=FALSE, warning=FALSE}
+# jpeg(file="RichnessSites.jpeg")
+ggplot(RichGath, aes(x=Site, y=value, color=Richness)) +
+  scale_color_manual(values=c("darkgrey", "black"))+
+  geom_errorbar(aes(ymin=RichLCL, ymax=RichUCL), width=.3, color="darkgrey") +
+  geom_point(size=2)+
+  ylab("Species Richness")+
+  coord_cartesian(ylim = c(0, 250))+
+  ggtitle("Estimated and observed species richness by site, with 95% confidence intervals.")+
+  labs(caption="Upper confidence interval for Site 10 extends to 330.80.")+
+  theme(axis.title=element_text(size=14), plot.title = element_text(size=14))
+# dev.off()
+```
+
+Sites had widely varying observed total richness. The use of extrapolated species accumulation curves can tell us how many species are likely to be at the site based on how many were found in accumulating subsamples. However if a curve never flattens, it gives a wild estimate of richness (see Site 10).
+
+What do the curves that made these estimates look like? Let's take a look!
+
+```{r Unicorn vomit, echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, cache=TRUE}
+ggiNEXT(out.inc.all, type=1, color.var="site") + 
+  theme_bw(base_size = 18) +
+  ylab("Species Richness") +
+  xlab("Number of Quadrats") +
+  ggtitle("Interpolated and extrapolated richness") +
+  labs(caption="B=10000.")
+```
+
+This plot is not particularly helpful other than to visualize the general span of observed and expected richnesses and sampling efforts. Examining the curves in portions of 3-4 is necessary to 
+
+```{r Many curves output, fig.height=25, fig.width=7, include=FALSE}
 #Richness (q=0), Shannon Div (q=1), Simpson Div (q=2)
 #Use grey=TRUE to make all lines black
 out.inc1<-iNEXT(site.list.freq.1, q=0, datatype="incidence_freq", size=NULL, nboot=100)
@@ -531,38 +820,11 @@ G<-ggiNEXT(out.inc7, type=1, color.var="site") +
   ylab("Species Richness") +
   xlab("Number of Quadrats") +
   labs(caption="B=100.")
-```
 
-```{r Many curves output, fig.height=25, fig.width=7, include=FALSE}
+
 ggarrange(A, B, C, D, E, F, G, nrow=7)
 ```
- 
-```{r Data rearranging, echo=FALSE, fig.height=4, fig.width=10, message=FALSE, warning=FALSE}
-Intervals<-select(slice(RichGath, c(28:54)), c(RichLCL, RichUCL))
-RichInts<-cbind(RichDivTab, Intervals)
-RichInts$PercComplete <- RichInts$RichnessObs/RichInts$RichnessExp*100
-RichInts$PercCompleteU<- RichInts$RichnessObs/RichInts$RichUCL*100
-RichInts$PercCompleteL<- RichInts$RichnessObs/RichInts$RichLCL*100
-sitesizes$QuadsArea<- sitesizes$Quadrats/(pi*(sitesizes$Length^2))
-sitesizes$Area<-(pi*(sitesizes$Length^2))
-# 
-# THIS PLOT IS TRASH
-# ggplot(RichInts, aes(x=Site, y=PercComplete)) +
-#   geom_bar(aes(y=sitesizes$Quadrats,x=Site), stat="identity", width = 0.75, fill="lightgrey")+
-#   geom_point(size=2)+
-#   geom_errorbar(aes(ymin=PercCompleteL, ymax=PercCompleteU), width=.3) +
-#   ylab("Observed/Expected Richness * 100")+
-#   scale_y_continuous(sec.axis = sec_axis(~., name = "Quadrats Sampled"))+
-#   ggtitle("Completion percentage and sample size per site")+
-#   theme(axis.title=element_text(size=14), plot.title = element_text(size=14))
-```
 
-```{r LM Sampling sufficiency, include=FALSE}
-lmRichQuad <- lm(RichInts$PercComplete ~ sitesizes$QuadsArea)
-autoplot(lmRichQuad)
-aRichQuad<-anova(lmRichQuad)
-aRichQuad
-```
 
 These curves illustrate not only *where* the flattening point (expected richness) occurs, but also *how quickly*. Examining a curve can allow someone to estimate how many more samples would be needed to reach that point, however if doing so samples a larger area then the curve may never flatten. 
 
@@ -581,6 +843,30 @@ ggplot(RichInts, aes(x=sitesizes$QuadsArea, y=PercComplete, color="black")) +
 
 There is no relationship between sampling effort and completion percentage (p=`r aRichQuad[1,5]`). However, note that Sites 10 and 26 were flagged as outliers by the autoplot function. This inadequate sampling is likely the result of too few quadrats sampled at the wetland edge relative to the size of the wetland. 
 
+```{r GLM Prep, message=FALSE, warning=FALSE}
+# change na. action
+options(na.action = "na.fail")
+
+RichSites<-cbind(sitesizes, RichInts)
+RichSites.t <- RichSites[ -c(1) ]
+
+model1<-glm(RichnessObs~EndDepth+StartDepth+DepthChange+Latitude+Permanence+Area, data= RichSites.t)
+
+resultsmodel<-dredge(model1)
+importance(resultsmodel)
+```
+
+Depth change between spring and fall sampling appears to be the most important factor determining observed site-level richness. 
+
+```{r}
+
+# change na. action
+# options(na.action = "na.fail")
+# 
+# gme1<- glm(Sum~Depth+Canopy+Depth*Canopy+Site:ID, data= quadvarssums)
+
+
+```
 
 
 ## Evenness and Dominance
@@ -588,10 +874,9 @@ There is no relationship between sampling effort and completion percentage (p=`r
 <figure>
 <img src="Images/Goosecropped.jpg"></figure><br>
 
-```{r Site size and richness, echo=FALSE, message=FALSE, warning=FALSE}
-quaddies<-merge(sitesizes, RichInts, by="Site")
-quaddies$Latitude <- as.numeric(as.character(quaddies$Latitude))
 
+
+```{r Site size and richness plot, echo=FALSE, message=FALSE, warning=FALSE}
 ggplot(RichInts, aes(x=sitesizes$Area, y=RichInts$RichnessObs)) +
   geom_point(size=2)+
   ylab("Site richness")+
@@ -602,84 +887,19 @@ ggplot(RichInts, aes(x=sitesizes$Area, y=RichInts$RichnessObs)) +
 
 There appears to be a relationship between site richness and site area, but unexpectedly this relationship appears to be negative. Because the data are likely non-linear, a generalized linear model should be used to assess this relationship.
 
+```{r}
+ggplot(RichInts, aes(x=Dominance, y=RichnessObs)) +
+  geom_point(size=2)+
+  xlab("Species Dominance (D)")+
+  ylab("Species Richness")+
+  ggtitle("Rich sites have low dominance")
+```
 
 
 
 ## Communities
 
-```{r Sorensen time, include=FALSE}
-sum01<-rowSums(S01)
-sum02<-rowSums(S02)
-sum03<-rowSums(S03)
-sum04<-rowSums(S04)
-sum05<-rowSums(S05)
-sum06<-rowSums(S06)
-sum07<-rowSums(S07)
-sum08<-rowSums(S08)
-sum09<-rowSums(S09)
-sum10<-rowSums(S10)
-sum11<-rowSums(S11)
-sum12<-rowSums(S12)
-sum13<-rowSums(S13)
-sum14<-rowSums(S14)
-sum16<-rowSums(S16)
-sum17<-rowSums(S17)
-sum18<-rowSums(S18)
-sum19<-rowSums(S19)
-sum20<-rowSums(S20)
-sum21<-rowSums(S21)
-sum22<-rowSums(S22)
-sum23<-rowSums(S23)
-sum24<-rowSums(S24)
-sum25<-rowSums(S25)
-sum26<-rowSums(S26)
-sum27<-rowSums(S27)
-sum28<-rowSums(S28)
 
-summary<-as.data.frame(rbind(sum01, sum02, sum03, sum04, sum05, sum06, sum07, sum08, sum09, sum10, sum11, sum12, sum13, sum14, sum16, sum17, sum18, sum19, sum20, sum21, sum22, sum23, sum24, sum25, sum26, sum27, sum28))
-sums<-colSums(summary)
-#TO DELETE SINGLETONS
-sumsums<-rbind(sums, summary)
-rownames(sumsums)[1]<-"sum"
-sumsums1 = sumsums[,sums > 1]
-ncol(sumsums[,sums == 1])
-#235** singletons!
-
-#Convert to binary
-sumsums1[sumsums1 > 0] <- 1
-
-sumsums2<-slice(sumsums1, -c(1))
-
-#0=identical, 1=the most dissimilar
-sorensen<-vegdist(sumsums2, method="bray", binary=TRUE, diag=TRUE, upper=FALSE, na.rm = FALSE)
-sorensen.m<-as.matrix(sorensen)
-sorensen.m.t<-signif(sorensen.m, digits = 3)
-```
-
-```{r Distance Matrix, include=FALSE}
-sitesizesgeo<-select(sitesizes, c("Site", "Latitude", "Longitude"))
-sitesizesgeo.1<-sitesizesgeo[,c(1,3,2)]
-sitesizesgeo.2<-sitesizesgeo.1[,c(2,3)]
-distance.m<-distm(sitesizesgeo.2)
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-#This is really sloppy
-sorensencol<-as.data.frame(sorensen.m.t)
-distancecol<-as.data.frame(distance.m)
-sorensenmelt<-melt(sorensencol, variable.name = 'Sorensen')
-geographicmelt<-melt(distancecol, variable.name = 'Geographic')
-distance.1<-cbind(geographicmelt, sorensenmelt)
-names(distance.1)<-c("Var1", "geographic", "Var2", "Sorensen")
-#Remove zero's because they occur whwere sites match
-distance.f<-filter(distance.1, geographic > 0)
-```
-
-```{r NMDS prep, include=FALSE}
-sorensen.nmds01 <- metaMDS(sorensen, k=10)
-sorstressplot<-stressplot(sorensen.nmds01)
-
-```
 
 
 ```{r NMDS, echo=FALSE, message=FALSE, warning=FALSE}
@@ -697,10 +917,14 @@ There may be a lot of overlap in clusters due to the nestedness of some communit
 
 ### Are sites similar because they're geographically closer?
 
+```{r message=FALSE, warning=FALSE}
+# heatmapColorDistance(sorensen.m.t, main = NULL,
+#   colorRampPalette(c("royalblue4", "ghostwhite"))(299), margins = c(5, 5))
+```
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 ggplot(distance.f, aes(x=distance.f$geographic, y=distance.f$Sorensen)) +
   geom_point()+
-  geom_smooth(method="glm", method.args=list(family="binomial"(link="logit")))+
   ylab("Sorensen dissimilarity index")+
   xlab("Geographic distance (m)")+
   ggtitle("Geographic distance between sites has no effect on species similarity")+
@@ -708,13 +932,43 @@ ggplot(distance.f, aes(x=distance.f$geographic, y=distance.f$Sorensen)) +
 ```
 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-distance.glm<-glm(Sorensen~geographic, family=binomial, data=distance.f)
-summary(distance.glm)
+
+```{r}
+mantel(sorensen.m.t, distance.m)
 ```
 
+```{r}
+adonis(sumsumsPerm[,1:312]~Permanence, data=sumsumsPerm, method="bray", binary=TRUE)
+```
+
+
+
+
 Ordinations
+
+```{r}
+# cluster<-hclust(sorensen02, method="average")
+# grp<-cutree(cluster,20)
+plot(sorensen.nmds02)
+```
+
+
+```{r}
+quadrat.rda<-rda(AllPonds[-1])
+
+biplot(quadrat.rda,
+       display=c("sites", "species"),
+       type=c("text", "points"))
+ordihull(quadrat.rda, group=AllPonds$Site)
+```
+
 
 ## Implications
 
 Plant communities aren't real. We can all go home now.
+
+
+```{r}
+beep(sound = 3, expr = NULL)
+```
+
